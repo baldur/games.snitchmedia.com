@@ -1,33 +1,37 @@
-// Triggered by postMessage in the page
+var LEFT = 37
+var RIGHT = 39
+var UP = 38
+var DOWN = 40
+
 onmessage = function (evt) {
-    if(evt.data[0] === 'check'){
+    if(evt.data[0] === 'checkWall'){
         switch(evt.data[1]) {
-        case "l":
+        case LEFT:
           if(0 <= evt.data[3].left) {
-              message = "ok";
+              message = ["wall", "ok"];
           } else {
-              message = "boom";
+              message = ["wall", "boom"];
           }
           break;
-        case "r":
+        case RIGHT:
           if(evt.data[2].width > evt.data[3].left) {
-              message = "ok";
+              message = ["wall", "ok"];
           } else {
-              message = "boom";
+              message = ["wall", "boom"];
           }
           break;
-        case "u":
+        case UP:
           if(0 <= evt.data[3].top) {
-              message = "ok";
+              message = ["wall", "ok"];
           } else {
-              message = "boom";
+              message = ["wall", "boom"];
           }
           break;
-        case "d":
+        case DOWN:
           if(evt.data[2].height > evt.data[3].top) {
-              message = "ok";
+              message = ["wall", "ok"];
           } else {
-              message = "boom";
+              message = ["wall", "boom"];
           }
           break;
         default:
