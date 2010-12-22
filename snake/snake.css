@@ -1,0 +1,2 @@
+#games #cage { position:relative; border: 5px solid black; height: 400px; width: 600px; margin: 2em auto}
+#games #cage #snake{ position:absolute; top: 10px; left: 40px; background: black; height: 5px; width: 5px;}
