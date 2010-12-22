@@ -14,13 +14,17 @@ $(function() {
     var $newDot3 = $snake.clone().css('left',$snake.position().left-15);
     var $newDot4 = $snake.clone().css('left',$snake.position().left-20);
     var $newDot5 = $snake.clone().css('left',$snake.position().left-25);
+    var $newDot6 = $snake.clone().css('left',$snake.position().left-30);
+    var $newDot7 = $snake.clone().css('left',$snake.position().left-35);
 
     $cage.append($newDot);
     $cage.append($newDot2);
     $cage.append($newDot3);
     $cage.append($newDot4);
     $cage.append($newDot5);
-    var snakeArray = [$snake,$newDot,$newDot2,$newDot3,$newDot4,$newDot5];
+    $cage.append($newDot6);
+    $cage.append($newDot7);
+    var snakeArray = [$snake,$newDot,$newDot2,$newDot3,$newDot4,$newDot5,$newDot6,$newDot7];
 
     var top = function() { return snakeArray[0].position().top; };
     var left = function() { return snakeArray[0].position().left; };
@@ -41,9 +45,12 @@ $(function() {
     var collisionChecker = new Worker("snake_worker_1.js");
 
     var moverId = setInterval(function() {
-        var message = ['checkWall', direction, { width: width, height: height }, {top: top(), left: left()}];
-        collisionChecker.postMessage(message);
-    }, 1000);
+        var checkWallMessage = ['checkWall', direction, { width: width, height: height }, {top: top(), left: left()}];
+        collisionChecker.postMessage(checkWallMessage);
+        
+        var checkSnakeMessage = ['checkSnake', direction, {top: top(), left: left()}, {x: $.map(snakeArray, function(val,index){return val.position().left}), y: $.map(snakeArray, function(val,index){return val.position().top}) }];
+        collisionChecker.postMessage(checkSnakeMessage);
+    }, 500);
 
     // Triggered by postMessage in the Web Worker
     collisionChecker.onmessage = function (evt) {
@@ -78,6 +85,9 @@ $(function() {
                    snakeArray.unshift(moving);
                break;
            }
+       } else if(evt.data[0] === "snake") {
+           console.log("joy ride over");
+           clearInterval(moverId);
        } else {
            clearInterval(moverId);
        }

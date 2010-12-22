@@ -38,6 +38,57 @@ onmessage = function (evt) {
           //code to be executed if n is different from case 1 and 2
         }
         postMessage(message);
+    } else if(evt.data[0] === 'checkSnake') {
+        var direction = evt.data[1];
+        var currentPos = evt.data[2];
+        var snake = evt.data[3];
+        switch(direction) {
+        case LEFT:
+          currentPos.left -= 5;
+          for(var i = 0; i<snake.x.length; i++) {
+               if(currentPos.left === snake.x[i]) {
+                   if(currentPos.top === snake.y[i]) {
+                       postMessage(['snake', 'hit the snake']);
+                   }
+               }
+           }
+          break;
+        case RIGHT:
+          currentPos.left += 5;
+          for(var i = 0; i<snake.x.length; i++) {
+               if(currentPos.left === snake.x[i]) {
+                   if(currentPos.top === snake.y[i]) {
+                       postMessage(['snake', 'hit the snake']);
+                   }
+               }
+           }
+          break;
+        case UP:
+          currentPos.top -= 5;
+          for(var i = 0; i<snake.y.length; i++) {
+               if(currentPos.top === snake.y[i]) {
+                   if(currentPos.left === snake.x[i]) {
+                       postMessage(['snake', 'hit the snake']);
+                   }
+               }
+           }
+          break;
+        case DOWN:
+          currentPos.top += 5;
+          for(var i = 0; i<snake.y.length; i++) {
+               if(currentPos.top === snake.y[i]) {
+                   if(currentPos.left === snake.x[i]) {
+                       postMessage(['snake', 'hit the snake']);
+                   }
+               }
+           }
+          break;
+        //
+        default:
+          //code to be executed if n is different from case 1 and 2
+        }
+
+          //check against snake
     } else {
         postMessage('dont know how to process this');
     }
