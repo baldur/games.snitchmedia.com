@@ -3,8 +3,8 @@ var RIGHT = 39
 var UP = 38
 var DOWN = 40
 
-onmessage = function (evt) {
-    if(evt.data[0] === 'checkWall'){
+var listeners = {
+    checkWall: function(evt) {
         switch(evt.data[1]) {
         case LEFT:
           if(0 <= evt.data[3].left) {
@@ -38,7 +38,8 @@ onmessage = function (evt) {
           //code to be executed if n is different from case 1 and 2
         }
         postMessage(message);
-    } else if(evt.data[0] === 'checkSnake') {
+    },
+    checkSnake: function(evt) {
         var direction = evt.data[1];
         var currentPos = evt.data[2];
         var snake = evt.data[3];
@@ -48,7 +49,7 @@ onmessage = function (evt) {
           for(var i = 0; i<snake.x.length; i++) {
                if(currentPos.left === snake.x[i]) {
                    if(currentPos.top === snake.y[i]) {
-                       postMessage(['snake', 'hit the snake']);
+                       postMessage(['snake', 'LEFT hit the snake', currentPos, snake]);
                    }
                }
            }
@@ -58,7 +59,7 @@ onmessage = function (evt) {
           for(var i = 0; i<snake.x.length; i++) {
                if(currentPos.left === snake.x[i]) {
                    if(currentPos.top === snake.y[i]) {
-                       postMessage(['snake', 'hit the snake']);
+                       postMessage(['snake', 'RIGHT hit the snake', currentPos, snake]);
                    }
                }
            }
@@ -68,7 +69,7 @@ onmessage = function (evt) {
           for(var i = 0; i<snake.y.length; i++) {
                if(currentPos.top === snake.y[i]) {
                    if(currentPos.left === snake.x[i]) {
-                       postMessage(['snake', 'hit the snake']);
+                       postMessage(['snake', 'UP hit the snake', currentPos, snake]);
                    }
                }
            }
@@ -78,7 +79,7 @@ onmessage = function (evt) {
           for(var i = 0; i<snake.y.length; i++) {
                if(currentPos.top === snake.y[i]) {
                    if(currentPos.left === snake.x[i]) {
-                       postMessage(['snake', 'hit the snake']);
+                       postMessage(['snake', 'DOWN hit the snake', currentPos, snake]);
                    }
                }
            }
@@ -88,7 +89,13 @@ onmessage = function (evt) {
           //code to be executed if n is different from case 1 and 2
         }
 
-          //check against snake
+    }
+};
+
+onmessage = function (evt) {
+    var method = listeners[evt.data[0]];
+    if(method){
+        method(evt); 
     } else {
         postMessage('dont know how to process this');
     }

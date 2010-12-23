@@ -3,44 +3,42 @@ $(function() {
     var RIGHT = 39
     var UP = 38
     var DOWN = 40
-    var direction = DOWN;
+    var direction = RIGHT;
     var $cage = $('#cage');
     var width = $cage.width();
     var height = $cage.height();
     var $snake = $('#snake');
+    var snakeArray = [$snake];
 
-    var $newDot = $snake.clone().css('left',$snake.position().left-5);
-    var $newDot2 = $snake.clone().css('left',$snake.position().left-10);
-    var $newDot3 = $snake.clone().css('left',$snake.position().left-15);
-    var $newDot4 = $snake.clone().css('left',$snake.position().left-20);
-    var $newDot5 = $snake.clone().css('left',$snake.position().left-25);
-    var $newDot6 = $snake.clone().css('left',$snake.position().left-30);
-    var $newDot7 = $snake.clone().css('left',$snake.position().left-35);
+    var $AnewDot = $snake.clone().css('left',$snake.position().left-5);
+    $cage.append($AnewDot);
+    snakeArray.push($AnewDot);
+    var growSnake = function() {
+        var $newDot;
+        switch(direction) {
+        case LEFT:
+            $newDot = $snake.clone().css('left',$snake.position().left-5);
+            break;
+        case RIGHT:
+            $newDot = $snake.clone().css('left',$snake.position().left+5);
+            break;
+        case UP:
+            $newDot = $snake.clone().css('top',$snake.position().top+5);
+            break;
+        case DOWN:
+            $newDot = $snake.clone().css('top',$snake.position().top-5);
+            break;
+        }
+        $cage.append($newDot);
+        snakeArray.push($newDot);
+    }
 
-    $cage.append($newDot);
-    $cage.append($newDot2);
-    $cage.append($newDot3);
-    $cage.append($newDot4);
-    $cage.append($newDot5);
-    $cage.append($newDot6);
-    $cage.append($newDot7);
-    var snakeArray = [$snake,$newDot,$newDot2,$newDot3,$newDot4,$newDot5,$newDot6,$newDot7];
-
+    var growerId = setInterval(function() {
+        growSnake();
+    }, 3000);
+    
     var top = function() { return snakeArray[0].position().top; };
     var left = function() { return snakeArray[0].position().left; };
-
-    var randomeDot = function(){ 
-        var top = Math.floor(Math.random()*height);
-        var left = Math.floor(Math.random()*width);
-        var $dot = $snake.clone();
-        $dot.css('left', left); 
-        $dot.css('top', top); 
-        $cage.append($dot);
-    };
-
-    //randomeDot();
-    //randomeDot();
-    //randomeDot();
 
     var collisionChecker = new Worker("snake_worker_1.js");
 
@@ -50,7 +48,7 @@ $(function() {
         
         var checkSnakeMessage = ['checkSnake', direction, {top: top(), left: left()}, {x: $.map(snakeArray, function(val,index){return val.position().left}), y: $.map(snakeArray, function(val,index){return val.position().top}) }];
         collisionChecker.postMessage(checkSnakeMessage);
-    }, 500);
+    }, 50);
 
     // Triggered by postMessage in the Web Worker
     collisionChecker.onmessage = function (evt) {
@@ -87,6 +85,9 @@ $(function() {
            }
        } else if(evt.data[0] === "snake") {
            console.log("joy ride over");
+           console.log(evt.data[1]);
+           console.log(evt.data[2]);
+           console.log(evt.data[3]);
            clearInterval(moverId);
        } else {
            clearInterval(moverId);
