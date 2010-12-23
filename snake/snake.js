@@ -35,7 +35,7 @@ $(function() {
 
     var growerId = setInterval(function() {
         growSnake();
-    }, 3000);
+    }, 1000);
     
     var top = function() { return snakeArray[0].position().top; };
     var left = function() { return snakeArray[0].position().left; };
