@@ -25,8 +25,8 @@ var listeners = {
         distance[UP]    = { y: -5, x:  0 };
         distance[DOWN]  = { y:  5, x:  0 };
 
-        currentPos.left = currentPos.left + distance[direction];
-        currentPos.top = currentPos + distance[direction];
+        currentPos.left = currentPos.left + distance[direction].x;
+        currentPos.top = currentPos.top + distance[direction].y;
 
         for(var i = 0; i<snake.y.length; i++) {
             if(currentPos.top === snake.y[i] && currentPos.left === snake.x[i]) {
