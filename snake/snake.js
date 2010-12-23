@@ -71,7 +71,7 @@ $(function() {
              console.log("can't reverse");
            } else if ( (direction === UP || direction === DOWN) && (e.keyCode === UP || e.keyCode === DOWN)) {
              console.log("can't reverse");
-           } else {
+           } else if(e.keyCode > 36 && e.keyCode < 41) {
              direction = e.keyCode;
            }
        } else {
