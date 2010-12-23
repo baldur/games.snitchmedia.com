@@ -10,28 +10,12 @@ $(function() {
     var $snake = $('#snake');
     var snakeArray = [$snake];
 
-    var $AnewDot = $snake.clone().css('left',$snake.position().left-5);
-    $cage.append($AnewDot);
-    snakeArray.push($AnewDot);
     var growSnake = function() {
-        var $newDot;
-        switch(direction) {
-        case LEFT:
-            $newDot = $snake.clone().css('left',$snake.position().left-5);
-            break;
-        case RIGHT:
-            $newDot = $snake.clone().css('left',$snake.position().left+5);
-            break;
-        case UP:
-            $newDot = $snake.clone().css('top',$snake.position().top+5);
-            break;
-        case DOWN:
-            $newDot = $snake.clone().css('top',$snake.position().top-5);
-            break;
-        }
+        var $newDot= $snake.clone();
         $cage.append($newDot);
         snakeArray.push($newDot);
     }
+    growSnake();
 
     var growerId = setInterval(function() {
         growSnake();
@@ -50,44 +34,25 @@ $(function() {
         collisionChecker.postMessage(checkSnakeMessage);
     }, 50);
 
+    var moveForward = function(direction){
+           var moving = snakeArray.pop();
+           var first = snakeArray[0];
+           var distance = {};
+           distance[RIGHT] = { y:  0, x:  5 };
+           distance[LEFT]  = { y:  0, x: -5 };
+           distance[UP]    = { y: -5, x:  0 };
+           distance[DOWN]  = { y:  5, x:  0 };
+           moving.css('top', first.position().top + distance[direction].y);
+           moving.css('left', first.position().left + distance[direction].x);
+           snakeArray.unshift(moving);
+    };
+
     // Triggered by postMessage in the Web Worker
     collisionChecker.onmessage = function (evt) {
        if(evt.data[0] === "wall" && evt.data[1] === "ok"){
-           switch(direction) {
-               case RIGHT:
-                   moving = snakeArray.pop();
-                   first = snakeArray[0];
-                   moving.css('top', first.position().top);
-                   moving.css('left', first.position().left + 5);
-                   snakeArray.unshift(moving);
-               break;
-               case LEFT:
-                   moving = snakeArray.pop();
-                   first = snakeArray[0];
-                   moving.css('top', first.position().top);
-                   moving.css('left', first.position().left - 5);
-                   snakeArray.unshift(moving);
-               break;
-               case DOWN:
-                   moving = snakeArray.pop();
-                   first = snakeArray[0];
-                   moving.css('top', first.position().top + 5);
-                   moving.css('left', first.position().left);
-                   snakeArray.unshift(moving);
-               break;
-               case UP:
-                   moving = snakeArray.pop();
-                   first = snakeArray[0];
-                   moving.css('top', first.position().top - 5);
-                   moving.css('left', first.position().left);
-                   snakeArray.unshift(moving);
-               break;
-           }
+           moveForward(direction);
        } else if(evt.data[0] === "snake") {
            console.log("joy ride over");
-           console.log(evt.data[1]);
-           console.log(evt.data[2]);
-           console.log(evt.data[3]);
            clearInterval(moverId);
        } else {
            clearInterval(moverId);
