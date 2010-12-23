@@ -5,6 +5,8 @@ $(function() {
     var DOWN = 40
     var direction = RIGHT;
     var $cage = $('#cage');
+    var $score = $('#score');
+    var score = 0;
     var width = $cage.width();
     var height = $cage.height();
     var $snake = $('#snake');
@@ -32,6 +34,7 @@ $(function() {
         
         var checkSnakeMessage = ['checkSnake', direction, {top: top(), left: left()}, {x: $.map(snakeArray, function(val,index){return val.position().left}), y: $.map(snakeArray, function(val,index){return val.position().top}) }];
         collisionChecker.postMessage(checkSnakeMessage);
+        $score.html(parseInt(score++/10, 10));
     }, 50);
 
     var moveForward = function(direction){
