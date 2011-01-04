@@ -80,6 +80,7 @@ $(function() {
        } else {
            console.log("already going that way");
        }
+       e.preventDefault();
    }); 
 
 });
