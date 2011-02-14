@@ -1,0 +1,4 @@
+#board {width: 400px; height: 400px}
+#board div { border: 1px solid white; background: #ccc; width: 32%; height: 32%; float: left}
+#board div.red0 {background: red}
+#board div.blue1 {background: blue}
