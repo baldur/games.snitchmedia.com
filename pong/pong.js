@@ -1,7 +1,7 @@
 $(function(){
 
     var direction = -1, distance = 5;
-    setInterval(function() {
+    var pid = setInterval(function() {
         var $ball = $('#ball'),
             $field = $('#field'),
             $leftPaddle = $('#left_paddle'),
@@ -15,20 +15,34 @@ $(function(){
             return ( pos[1] >= topPos && pos[1] < bottomPos ); 
         }
 
-        var leftBoundry = function(pos, paddle, dist) {
+        var leftPaddleHit = function(pos, paddle, dist) {
             return ( pos[0] < parseInt( paddle.css( 'left' ), 10 ) + dist && paddleHit( paddle, pos ) );
         };
 
-        var rightBoundry = function(pos, paddle, dist, field) {
-            return ( pos[0] > field.width() - dist * 2 && paddleHit( paddle, pos) );
+        var rightPaddleHit = function(pos, paddle, dist, field) {
+            return ( pos[0] > field.width() - dist * 2 && paddleHit( paddle, pos ) );
         };
 
-        if( leftBoundry( currentPos, $leftPaddle, distance ) ) {
+        var ballOut = function(pos, field) {
+            return ( pos[0] < 0 || pos[0] > field.width() );
+        };
+
+        var gameOver = function() {
+            // implement something cool here ;)
+            alert( 'Game Over' );
+        };
+
+        if( leftPaddleHit( currentPos, $leftPaddle, distance ) ) {
             direction = 1;
         }
 
-        if( rightBoundry( currentPos, $rightPaddle, distance, $field ) ) {
+        if( rightPaddleHit( currentPos, $rightPaddle, distance, $field ) ) {
             direction = -1;
+        }
+
+        if( ballOut( currentPos, $field ) ) {
+            gameOver();
+            clearInterval( pid );
         }
 
         var newLeft = currentPos[0] + (direction*distance);
