@@ -1,6 +1,6 @@
 $(function(){
 
-    var direction = -1, distance = 5;
+    var direction = [1, -1], distance = 5;
     var pid = setInterval(function() {
         var $ball = $('#ball'),
             $field = $('#field'),
@@ -27,17 +27,33 @@ $(function(){
             return ( pos[0] < 0 || pos[0] > field.width() );
         };
 
+        var upperWallHit = function(pos) {
+            return ( pos[1] < 0 );
+        };
+
+        var lowerWallHit = function(pos, field, dist) {
+            return ( pos[1] > field.height() - dist * 2 );
+        };
+
         var gameOver = function() {
             // implement something cool here ;)
             alert( 'Game Over' );
         };
 
         if( leftPaddleHit( currentPos, $leftPaddle, distance ) ) {
-            direction = 1;
+            direction[0] = 1;
         }
 
         if( rightPaddleHit( currentPos, $rightPaddle, distance, $field ) ) {
-            direction = -1;
+            direction[0] = -1;
+        }
+
+        if( upperWallHit( currentPos ) ) {
+            direction[1] = 1;
+        }
+
+        if( lowerWallHit( currentPos, $field, distance ) ) {
+            direction[1] = -1;
         }
 
         if( ballOut( currentPos, $field ) ) {
@@ -45,8 +61,10 @@ $(function(){
             clearInterval( pid );
         }
 
-        var newLeft = currentPos[0] + (direction*distance);
+        var newLeft = currentPos[0] + (direction[0]*distance);
+        var newTop = currentPos[1] + (direction[1]*distance);
         $ball.css('left', newLeft);
+        $ball.css('top', newTop);
     }, 30);
 
 });
