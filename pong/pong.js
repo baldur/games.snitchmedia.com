@@ -26,6 +26,8 @@ $(function(){
         var topPos = parseInt( paddle.css( 'top' ), 10 );
         paddle.css( 'top', topPos + ( 5*direction ) ); 
     };
+    // a z move left up and down
+    // / ' move right up and down
     $(document).keydown(function(e) {
         var leftUp = function(){ 
             mover($('#left_paddle'), -1);
@@ -44,7 +46,10 @@ $(function(){
                            191 : rightDown,
                            222 : rightUp };
 
-        directions[e.which]();
-        e.preventDefault();
+        func = directions[e.which];
+        if( func ) {
+            func();
+            e.preventDefault();
+        }
     });
 });
