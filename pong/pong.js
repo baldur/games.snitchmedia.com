@@ -1,4 +1,4 @@
-$(function(){
+var startGame = function(){
 
     var direction = [1, -1], distance = 5;
     var pid = setInterval(function() {
@@ -67,9 +67,13 @@ $(function(){
         $ball.css('top', newTop);
     }, 30);
 
-});
+};
 
 $(function(){
+    $("#start_game").click(function(e){
+        startGame();
+        e.preventDefault();
+    });
     var moverPidLeft;
     var startMoveLeft = function(paddle, direction) {
         moverPidLeft = setInterval(function(){ 

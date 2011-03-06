@@ -1,3 +1,13 @@
+#directions {
+  margin: 0 auto;
+  width: 600px;
+  line-height: 1
+}
+
+#directions * {
+  margin: 0
+}
+
 #field { 
   position: relative;
   margin: 50px auto;
