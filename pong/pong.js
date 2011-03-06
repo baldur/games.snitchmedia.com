@@ -70,24 +70,52 @@ $(function(){
 });
 
 $(function(){
-    var mover = function(paddle, direction) {
-        var topPos = parseInt( paddle.css( 'top' ), 10 );
-        paddle.css( 'top', topPos + ( 5*direction ) ); 
+    var moverPidLeft;
+    var startMoveLeft = function(paddle, direction) {
+        moverPidLeft = setInterval(function(){ 
+            var topPos = parseInt( paddle.css( 'top' ), 10 );
+            paddle.css( 'top', topPos + ( 15*direction ) ); 
+        }, 70)
+    };
+    var moverPidRight;
+    var startMoveRight = function(paddle, direction) {
+        moverPidRight = setInterval(function(){ 
+            var topPos = parseInt( paddle.css( 'top' ), 10 );
+            paddle.css( 'top', topPos + ( 15*direction ) ); 
+        }, 70)
     };
     // a z move left up and down
     // / ' move right up and down
+
+    var leftIsDown = false,
+        leftIsUp = false,
+        rightIsDown = false,
+        rightIsUp = false;
+
     $(document).keydown(function(e) {
         var leftUp = function(){ 
-            mover($('#left_paddle'), -1);
+            if(!leftIsUp) {
+                startMoveLeft($('#left_paddle'), -1);
+                leftIsUp = true;
+            }
         };
         var leftDown = function(){
-            mover($('#left_paddle'), 1);
+            if(!leftIsDown) {
+                startMoveLeft($('#left_paddle'), 1);
+                leftIsDown = true;
+            }
         };
         var rightUp = function(){
-            mover($('#right_paddle'), -1);
+            if(!rightIsUp) {
+                startMoveRight($('#right_paddle'), -1);
+                rightIsUp = true;
+            }
         };
         var rightDown = function(){
-            mover($('#right_paddle'), 1);
+            if(!rightIsDown) {
+                startMoveRight($('#right_paddle'), 1);
+                rightIsDown = true;
+            }
         };
         var directions = { 65  : leftUp,
                            90  : leftDown,
@@ -100,4 +128,42 @@ $(function(){
             e.preventDefault();
         }
     });
+
+    $(document).keyup(function(e) {
+        var falsifyLeft = function() {
+            leftIsUp = false;
+            leftIsDown = false;
+        };
+        var falsifyRight = function() {
+            rightIsUp = false;
+            rightIsDown = false;
+        };
+        var stopLeftUp = function(){
+            clearInterval( moverPidLeft );
+            falsifyLeft();
+        };
+        var stopLeftDown = function(){
+            clearInterval( moverPidLeft );
+            falsifyLeft();
+        };
+        var stopRightUp = function(argument) {
+            clearInterval( moverPidRight );
+            falsifyRight();
+        };
+        var stopRightDown = function(argument) {
+            clearInterval( moverPidRight );
+            falsifyRight();
+        };
+        var directions = { 65  : stopLeftUp,
+                           90  : stopLeftDown,
+                           191 : stopRightUp,
+                           222 : stopRightDown };
+
+        func = directions[e.which];
+        if( func ) {
+            func();
+            e.preventDefault();
+        }
+    });
 });
+
