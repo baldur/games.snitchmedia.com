@@ -74,16 +74,12 @@ $(function(){
         startGame();
         e.preventDefault();
     });
-    var moverPidLeft;
-    var startMoveLeft = function(paddle, direction) {
-        moverPidLeft = setInterval(function(){ 
-            var topPos = parseInt( paddle.css( 'top' ), 10 );
-            paddle.css( 'top', topPos + ( 15*direction ) ); 
-        }, 70)
+    var pids = {
+        left_paddle: undefined,
+        right_paddle: undefined
     };
-    var moverPidRight;
-    var startMoveRight = function(paddle, direction) {
-        moverPidRight = setInterval(function(){ 
+    var startMove = function(paddle, direction) {
+        pids[paddle.attr('id')] = setInterval(function(){ 
             var topPos = parseInt( paddle.css( 'top' ), 10 );
             paddle.css( 'top', topPos + ( 15*direction ) ); 
         }, 70)
@@ -99,25 +95,25 @@ $(function(){
     $(document).keydown(function(e) {
         var leftUp = function(){ 
             if(!leftIsUp) {
-                startMoveLeft($('#left_paddle'), -1);
+                startMove($('#left_paddle'), -1);
                 leftIsUp = true;
             }
         };
         var leftDown = function(){
             if(!leftIsDown) {
-                startMoveLeft($('#left_paddle'), 1);
+                startMove($('#left_paddle'), 1);
                 leftIsDown = true;
             }
         };
         var rightUp = function(){
             if(!rightIsUp) {
-                startMoveRight($('#right_paddle'), -1);
+                startMove($('#right_paddle'), -1);
                 rightIsUp = true;
             }
         };
         var rightDown = function(){
             if(!rightIsDown) {
-                startMoveRight($('#right_paddle'), 1);
+                startMove($('#right_paddle'), 1);
                 rightIsDown = true;
             }
         };
@@ -143,19 +139,19 @@ $(function(){
             rightIsDown = false;
         };
         var stopLeftUp = function(){
-            clearInterval( moverPidLeft );
+            clearInterval( pids.left_paddle );
             falsifyLeft();
         };
         var stopLeftDown = function(){
-            clearInterval( moverPidLeft );
+            clearInterval( pids.left_paddle );
             falsifyLeft();
         };
-        var stopRightUp = function(argument) {
-            clearInterval( moverPidRight );
+        var stopRightUp = function() {
+            clearInterval( pids.right_paddle );
             falsifyRight();
         };
-        var stopRightDown = function(argument) {
-            clearInterval( moverPidRight );
+        var stopRightDown = function() {
+            clearInterval( pids.right_paddle );
             falsifyRight();
         };
         var directions = { 65  : stopLeftUp,
