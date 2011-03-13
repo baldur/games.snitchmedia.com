@@ -124,8 +124,10 @@ $(function() {
         pid = setInterval(function(){ 
             $paddle = $('#paddle'); 
             var leftPos = parseInt( $paddle.css( 'left' ), 10 );
-            $paddle.css( 'left', leftPos + ( 15*direction ) ); 
-        }, 70);
+            if( (leftPos > 0 && direction < 0) || (leftPos < $('#field').width() - $paddle.width() && direction > 0) ) {
+                $paddle.css( 'left', leftPos + ( 15*direction ) ); 
+            }
+        }, 20);
     };
 
     var goingRight = function(state) {
