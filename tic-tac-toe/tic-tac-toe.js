@@ -34,7 +34,7 @@ $(function(){
     };
     $("#board div:not(.red):not(.blue)").live('click', function() {
         turn++;
-        if(turn.toString(2) & 1) {
+        if(turn & 1) {
             $(this).addClass('red0');
         } else {
             $(this).addClass('blue1');
