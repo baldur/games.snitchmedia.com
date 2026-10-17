@@ -1,22 +1,27 @@
 import { createGame, step, W, H, paddleSize, ballSize } from './game.js';
-import { Input, BUTTON } from './input.js';
+import { Input, BUTTON } from '../shared/input.js';
 import { tone, isMuted, setMuted } from '../shared/audio.js';
+import { fitCanvas, themeColors, reducedMotion } from '../shared/canvas.js';
+import { openDialog, gamepadDialogs, soundToggle } from '../shared/dialogs.js';
 
 const STEP = 1 / 120; // fixed simulation step, independent of display refresh rate
 const TRAIL = 6;
 
 const canvas = document.getElementById('field');
-const ctx = canvas.getContext('2d');
+const ctx = fitCanvas(canvas, W, H);
+const colors = themeColors({ field: '--field', ink: '--field-ink', dim: '--field-dim' });
 const menu = document.getElementById('menu');
 const paused = document.getElementById('paused');
 const over = document.getElementById('over');
 const winnerText = document.getElementById('winner');
-const pauseButton = document.getElementById('pause');
-const soundButton = document.getElementById('sound');
 const status = document.getElementById('status');
 
-const input = new Input(canvas, H);
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const input = new Input(canvas, {
+  keys: { KeyW: [0, -1], KeyS: [0, 1], ArrowUp: [1, -1], ArrowDown: [1, 1] },
+  axis: 'y',
+  length: H,
+  sideBy: 'x',
+});
 
 let game = createGame({ solo: true });
 let state = 'menu'; // 'menu' | 'playing' | 'paused' | 'over'
@@ -33,11 +38,6 @@ const sounds = {
 
 // --- game flow ---------------------------------------------------------------
 
-function open(dialog) {
-  dialog.returnValue = '';
-  dialog.showModal();
-}
-
 function start(solo) {
   game = createGame({ solo });
   trail = [];
@@ -48,24 +48,24 @@ function start(solo) {
 function pause() {
   if (state !== 'playing') return;
   state = 'paused';
-  open(paused);
+  openDialog(paused);
 }
 
 function finish() {
   state = 'over';
-  const [left] = game.paddles;
+  const [left, right] = game.paddles;
   winnerText.textContent = game.solo
     ? (game.winner === 0 ? 'You win!' : 'The computer wins')
     : `${game.winner === 0 ? 'Left' : 'Right'} player wins!`;
-  winnerText.textContent += ` ${left.score}–${game.paddles[1].score}`;
-  open(over);
+  winnerText.textContent += ` ${left.score}–${right.score}`;
+  openDialog(over);
 }
 
 function toMenu() {
   state = 'menu';
   game = createGame({ solo: true });
   status.textContent = '';
-  open(menu);
+  openDialog(menu);
 }
 
 menu.addEventListener('cancel', (e) => e.preventDefault()); // nowhere to go back to
@@ -82,23 +82,12 @@ over.addEventListener('close', () => {
   else toMenu();
 });
 
-pauseButton.addEventListener('click', pause);
+document.getElementById('pause').addEventListener('click', pause);
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-
-function renderSound() {
-  soundButton.textContent = isMuted() ? 'Sound off' : 'Sound on';
-  soundButton.setAttribute('aria-pressed', String(!isMuted()));
-}
-function toggleSound() {
-  setMuted(!isMuted());
-  renderSound();
-}
-soundButton.addEventListener('click', toggleSound);
-renderSound();
+soundToggle(document.getElementById('sound'), { isMuted, setMuted });
 
 addEventListener('keydown', (e) => {
   if (e.repeat) return;
-  if (e.code === 'KeyM') toggleSound();
   if ((e.code === 'KeyP' || e.code === 'Escape') && state === 'playing') {
     e.preventDefault(); // keep this Escape from also closing the dialog it opens
     pause();
@@ -109,46 +98,15 @@ addEventListener('gamepadconnected', (e) => {
   status.textContent = `Gamepad connected: ${e.gamepad.id.split('(')[0].trim()}`;
 });
 
-// Lets a gamepad drive the dialogs: d-pad moves focus, A presses, Start pauses or resumes.
-function gamepadUi(pressed) {
-  const dialog = [menu, paused, over].find((d) => d.open);
-  if (!dialog) {
-    if (pressed.has(BUTTON.START)) pause();
-    return;
-  }
-  if (pressed.has(BUTTON.START) && dialog === paused) {
+function handleGamepad(pressed) {
+  if (pressed.has(BUTTON.START) && paused.open) {
     paused.close('resume');
     return;
   }
-  const buttons = [...dialog.querySelectorAll('form button')];
-  const i = buttons.indexOf(document.activeElement);
-  if (pressed.has(BUTTON.DOWN)) buttons[(i + 1) % buttons.length].focus();
-  if (pressed.has(BUTTON.UP)) buttons[(i - 1 + buttons.length) % buttons.length].focus();
-  if (pressed.has(BUTTON.A) || pressed.has(BUTTON.START)) (buttons[i] ?? buttons[0]).click();
+  if (!gamepadDialogs([menu, paused, over], pressed) && pressed.has(BUTTON.START)) pause();
 }
 
 // --- rendering ---------------------------------------------------------------
-
-let colors;
-function readColors() {
-  const css = getComputedStyle(document.documentElement);
-  colors = {
-    field: css.getPropertyValue('--field').trim(),
-    ink: css.getPropertyValue('--field-ink').trim(),
-    dim: css.getPropertyValue('--field-dim').trim(),
-  };
-}
-readColors();
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
-
-// Back the canvas with real device pixels and draw in field units.
-new ResizeObserver(() => {
-  const dpr = devicePixelRatio || 1;
-  canvas.width = Math.round(canvas.clientWidth * dpr);
-  canvas.height = Math.round(canvas.clientWidth * dpr * (H / W));
-  const scale = canvas.width / W;
-  ctx.setTransform(scale, 0, 0, scale, 0, 0);
-}).observe(canvas);
 
 function draw() {
   ctx.fillStyle = colors.field;
@@ -198,7 +156,7 @@ let acc = 0;
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
-  gamepadUi(input.poll());
+  handleGamepad(input.poll());
 
   if (state === 'playing') {
     acc += dt;
@@ -226,5 +184,5 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-open(menu);
+openDialog(menu);
 requestAnimationFrame(frame);

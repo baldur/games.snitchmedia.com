@@ -1,3 +1,6 @@
+/* Layout for a game page: header bar, one canvas field, a status line. A game sets
+   --aspect (width / height) on #field to match its field units. */
+
 body {
   display: flex;
   flex-direction: column;
@@ -17,9 +20,10 @@ header h1 + a { margin-right: auto; font-size: 0.9rem; }
 
 #field {
   display: block;
-  /* 8:5 field that fits both the viewport width and the height left under the header. */
-  width: min(100%, 60rem, calc((100dvh - 7rem) * 1.6));
-  aspect-ratio: 8 / 5;
+  /* Fits both the viewport width and the height left under the header. */
+  --aspect: 1.6;
+  width: min(100%, 60rem, calc((100dvh - 7rem) * var(--aspect)));
+  aspect-ratio: var(--aspect);
   background: var(--field);
   border-radius: 6px;
   touch-action: none;

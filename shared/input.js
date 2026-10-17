@@ -1,33 +1,33 @@
-// Turns keyboard, pointer and gamepad state into per-paddle intent.
+// Turns keyboard, pointer and gamepad state into per-player "paddle" intent for
+// games where each player steers along one axis (Pong vertically, Bricks horizontally).
 // A side is driven either by an axis (-1..1, keys and sticks) or by an absolute
-// target y (pointer drag), whichever was touched most recently.
-
-const KEYS = {
-  KeyW: [0, -1],
-  KeyS: [0, 1],
-  ArrowUp: [1, -1],
-  ArrowDown: [1, 1],
-};
+// target position (pointer drag), whichever was used most recently.
 
 const DEADZONE = 0.2;
-const BUTTON = { A: 0, START: 9, UP: 12, DOWN: 13 };
+
+// Standard-mapping gamepad button indices.
+export const BUTTON = { A: 0, B: 1, START: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
 
 export class Input {
   #held = new Set();
-  #pointers = new Map(); // pointerId -> { xFrac, y }
+  #pointers = new Map(); // pointerId -> { frac, pos, type, at }
   #pads = [];
   #prevButtons = new Map(); // gamepad index -> pressed[]
-  #lastSource = ['keys', 'keys'];
-  #axisAt = [0, 0];
+  #lastSource = [];
+  #axisAt = [];
 
-  constructor(canvas, fieldHeight) {
-    this.canvas = canvas;
-    this.fieldHeight = fieldHeight;
+  // canvas:  element that receives pointer input
+  // keys:    { [KeyboardEvent.code]: [side, direction] }
+  // axis:    'x' | 'y', the direction paddles move in
+  // length:  field size along `axis`, so pointer positions come back in field units
+  // sideBy:  'x' | 'y' | null, which half of the canvas a pointer lands in picks the side
+  constructor(canvas, { keys, axis, length, sideBy = null }) {
+    Object.assign(this, { canvas, keys, axis, length, sideBy });
 
     addEventListener('keydown', (e) => {
-      if (e.code in KEYS) {
+      if (e.code in keys) {
         this.#held.add(e.code);
-        this.#lastSource[KEYS[e.code][0]] = 'keys';
+        this.#lastSource[keys[e.code][0]] = 'keys';
         e.preventDefault();
       }
     });
@@ -50,16 +50,18 @@ export class Input {
 
   #trackPointer(e) {
     const rect = this.canvas.getBoundingClientRect();
+    const fx = (e.clientX - rect.left) / rect.width;
+    const fy = (e.clientY - rect.top) / rect.height;
     this.#pointers.set(e.pointerId, {
-      xFrac: (e.clientX - rect.left) / rect.width,
-      y: ((e.clientY - rect.top) / rect.height) * this.fieldHeight,
+      frac: this.sideBy === 'y' ? fy : fx,
+      pos: (this.axis === 'x' ? fx : fy) * this.length,
       type: e.pointerType,
       at: performance.now(),
     });
   }
 
-  #sideOf(xFrac, solo) {
-    return solo || xFrac < 0.5 ? 0 : 1;
+  #sideOf(frac, solo) {
+    return solo || !this.sideBy || frac < 0.5 ? 0 : 1;
   }
 
   #padFor(side, solo) {
@@ -78,17 +80,18 @@ export class Input {
     return pressed;
   }
 
-  // { axis, target } for one paddle; target is a field y or null.
-  read(side, solo) {
+  // { axis, target } for one player; target is a field position or null.
+  // In solo games every key and the first gamepad drive side 0.
+  read(side, solo = true) {
     const axis = this.#axis(side, solo);
     if (axis) this.#axisAt[side] = performance.now();
 
     // A held touch always steers; a resting mouse only until a key or stick is used.
     for (const p of this.#pointers.values()) {
-      if (this.#sideOf(p.xFrac, solo) !== side) continue;
-      if (p.type !== 'mouse' || p.at > this.#axisAt[side]) {
+      if (this.#sideOf(p.frac, solo) !== side) continue;
+      if (p.type !== 'mouse' || p.at > (this.#axisAt[side] ?? 0)) {
         this.#lastSource[side] = p.type === 'touch' ? 'touch' : 'mouse';
-        return { axis: 0, target: p.y };
+        return { axis: 0, target: p.pos };
       }
     }
     return { axis, target: null };
@@ -97,16 +100,19 @@ export class Input {
   #axis(side, solo) {
     let axis = 0;
     for (const code of this.#held) {
-      const [keySide, dir] = KEYS[code];
+      const [keySide, dir] = this.keys[code];
       if (keySide === side || solo) axis += dir;
     }
 
     const pad = this.#padFor(side, solo);
     if (pad) {
-      const stick = pad.axes[1] ?? 0;
+      const [stickIndex, minus, plus] = this.axis === 'x'
+        ? [0, BUTTON.LEFT, BUTTON.RIGHT]
+        : [1, BUTTON.UP, BUTTON.DOWN];
+      const stick = pad.axes[stickIndex] ?? 0;
       const padAxis = (Math.abs(stick) > DEADZONE ? stick : 0)
-        + (pad.buttons[BUTTON.DOWN]?.pressed ? 1 : 0)
-        - (pad.buttons[BUTTON.UP]?.pressed ? 1 : 0);
+        + (pad.buttons[plus]?.pressed ? 1 : 0)
+        - (pad.buttons[minus]?.pressed ? 1 : 0);
       if (padAxis) this.#lastSource[side] = 'pad';
       axis += padAxis;
     }
@@ -114,16 +120,14 @@ export class Input {
   }
 
   // A short buzz on whatever the player on this side is holding.
-  rumble(side, solo) {
+  rumble(side, solo = true, strength = 0.5) {
     const source = this.#lastSource[side];
     if (source === 'pad') {
       this.#padFor(side, solo)?.vibrationActuator?.playEffect('dual-rumble', {
-        duration: 40, strongMagnitude: 0.5, weakMagnitude: 0.3,
+        duration: 40, strongMagnitude: strength, weakMagnitude: strength * 0.6,
       }).catch(() => {});
     } else if (source === 'touch') {
       navigator.vibrate?.(12);
     }
   }
 }
-
-export { BUTTON };
