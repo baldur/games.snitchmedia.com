@@ -3,11 +3,13 @@
 // clockwise seen from above, so turning right increases it. Roll > 0 leans right.
 
 export const BOAT = {
-  // Strokes: each one adds speed; drag takes it away again.
-  impulse: 0.55, // m/s from a clean stroke at full stamina
+  // Strokes: each one adds speed; drag takes it away again. Tuned to real K1
+  // speeds: about 10 km/h at an easy rhythm, 12-13 km/h at a sustainable racing
+  // rhythm, 17-18 km/h flat out on fresh legs.
+  impulse: 0.35, // m/s from a clean stroke at full stamina
   minInterval: 0.2, // strokes closer together than this catch less water
   sameSide: 0.45, // power of a second stroke on the same side
-  drag: 0.035, // quadratic
+  drag: 0.067, // quadratic
   linearDrag: 0.02,
   strokeTime: 0.32, // how long the blade is in the water
 
@@ -16,7 +18,7 @@ export const BOAT = {
   recover: 0.03,
 
   // Steering: the rudder needs speed to bite; strokes nudge the bow.
-  rudder: 0.12, // target yaw rate per m/s of speed
+  rudder: 0.16, // target yaw rate per m/s of speed
   rudderMaxSpeed: 6,
   yawResponse: 2.5,
   strokeYaw: 0.05,
@@ -27,7 +29,7 @@ export const BOAT = {
   tip: 3.0,
   stabilityStill: 2.5,
   stabilitySpeed: 0.3,
-  stableSpeed: 4.5,
+  stableSpeed: 3.5,
   rollDamp: 0.9,
   brace: 0.8,
   lean: 2.2,

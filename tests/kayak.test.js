@@ -24,9 +24,18 @@ function paddle(seconds, { interval = 0.35, sides = ['left', 'right'], lean = ()
 // A steady paddler who leans against the roll.
 const balance = (b) => Math.max(-1, Math.min(1, -(b.roll * 2 + b.rollRate * 0.6)));
 
-test('alternating strokes build speed and drag settles it', () => {
+test('speeds match real K1 paddling', () => {
+  const kmh = (interval, seconds = 20) => paddle(seconds, { interval, lean: balance }).boat.speed * 3.6;
+  const easy = kmh(0.5);
+  const racing = kmh(0.35);
+  const sprint = kmh(0.2, 8);
+  assert.ok(easy > 9 && easy < 11, `easy ${easy}`);
+  assert.ok(racing > 12 && racing < 14, `racing ${racing}`);
+  assert.ok(sprint > 16 && sprint < 18.5, `sprint ${sprint}`);
+});
+
+test('alternating strokes paddle upright', () => {
   const { boat } = paddle(30, { lean: balance });
-  assert.ok(boat.speed > 5 && boat.speed < 7, `cruising speed ${boat.speed}`);
   assert.equal(boat.capsizes, 0);
 });
 
