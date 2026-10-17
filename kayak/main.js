@@ -5,7 +5,7 @@ import { buildWorld } from './world.js';
 import { kayakMesh, paddleMesh, paddlerMesh, limbMesh, SEAT, SHOULDER } from './meshes.js';
 import { createRenderer } from './render.js';
 import { perspective, view, basis, multiply, translation, rotationY, rotationZ } from './mat4.js';
-import { Controls, BUTTON } from './controls.js';
+import { Controls, BUTTON, TILT_REFLEX } from './controls.js';
 import { tone, noise, isMuted, setMuted } from '../shared/audio.js';
 import { openDialog, gamepadDialogs, soundToggle } from '../shared/dialogs.js';
 
@@ -331,6 +331,7 @@ function simulate(dt) {
     return;
   }
   if (controls.assist) input.lean = Math.max(-1, Math.min(1, input.lean - (boat.roll * 2 + boat.rollRate * 0.6)));
+  else if (controls.tilting) input.lean = Math.max(-1, Math.min(1, input.lean - TILT_REFLEX * boat.rollRate));
   react(stepRace(race, dt, input));
 }
 
@@ -611,6 +612,7 @@ if (location.hash === '#debug') {
     get course() { return race.course; },
     get state() { return state; },
     get gpu() { return renderer?.stats; },
+    get tilt() { return controls.tiltLean; },
   };
 }
 

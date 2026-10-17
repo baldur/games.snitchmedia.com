@@ -4,8 +4,10 @@
 // On a phone held sideways, turning it like a steering wheel shifts your
 // weight (lean), from the motion sensors: keep the horizon level. Each touch strokes on its side of
 // the screen, and sliding a finger that's down sideways works the rudder.
-// Without the sensors (no permission, or a page not served over HTTPS on
-// iOS), touch play keeps you upright automatically: see `assist`.
+// The phone's angle comes from the fused orientation sensor where there is
+// one (steady, and blind to the jolt of each tap), else from the raw
+// accelerometer. Without either (no permission, or a page not served over
+// HTTPS on iOS), touch play keeps you upright automatically: see `assist`.
 import { BUTTON } from '../shared/input.js';
 
 // The one place to change the key layout.
@@ -21,8 +23,11 @@ export const KEYS = {
 const PAD = { LB: 4, RB: 5, LT: 6, RT: 7 };
 const DEADZONE = 0.15;
 const KEY_LEAN_RATE = 5; // keyboard lean eases in and out so taps can be gentle
-const TILT_FULL = 0.3; // radians of phone turn (about 17 degrees) for a full lean
+// Tuned against a simulated player who reacts after 0.3-0.4 s: a twitchier
+// setting has them over-correcting into ever bigger wobbles.
+const TILT_FULL = 0.5; // radians of phone turn (about 29 degrees) for a full lean
 const TILT_DEAD = 0.02;
+export const TILT_REFLEX = 0.3; // lean against the roll rate, as your hips would: see main.js
 const DRAG_FULL = 0.14; // share of the screen width to slide for full rudder
 
 export class Controls {
@@ -34,7 +39,7 @@ export class Controls {
   #touching = false;
   #fingers = new Map(); // pointerId -> x where it came down
   #dragRudder = 0;
-  #tilt = { on: false, zero: null, flip: 1, lean: 0, at: null };
+  #tilt = { on: false, zero: null, flip: 1, lean: 0, at: null, fused: null };
 
   constructor(target) {
     addEventListener('keydown', (e) => {
@@ -73,13 +78,14 @@ export class Controls {
   // Starts reading the motion sensors. Call it from a tap or click: iOS asks
   // for permission, and only allows asking in response to one.
   async enableTilt() {
-    if (this.#tilt.on || !window.DeviceMotionEvent) return;
+    if (this.#tilt.on || !window.DeviceOrientationEvent) return;
     try {
-      if (DeviceMotionEvent.requestPermission && await DeviceMotionEvent.requestPermission() !== 'granted') return;
+      if (DeviceOrientationEvent.requestPermission && await DeviceOrientationEvent.requestPermission() !== 'granted') return;
     } catch {
       return;
     }
     this.#tilt.on = true;
+    addEventListener('deviceorientation', (e) => this.#orientation(e));
     addEventListener('devicemotion', (e) => this.#motion(e));
   }
 
@@ -98,18 +104,38 @@ export class Controls {
     return this.#touching && !this.tilting && !this.#pad;
   }
 
+  get tiltLean() {
+    return this.tilting ? this.#tilt.lean : null;
+  }
+
+  // Which way is up, in the phone's own axes (x right, y up the screen held
+  // upright, z out of it), from its orientation angles.
+  #orientation(e) {
+    if (e.beta == null || e.gamma == null) return;
+    const b = (e.beta * Math.PI) / 180;
+    const g = (e.gamma * Math.PI) / 180;
+    this.#tilt.fused = performance.now();
+    this.#up(-Math.cos(b) * Math.sin(g), Math.sin(b), true);
+  }
+
+  // The same from the accelerometer, which also feels every jolt: only used
+  // when there's no orientation sensor.
   #motion(e) {
     const g = e.accelerationIncludingGravity;
-    if (g?.x == null) return;
+    if (g?.x == null || performance.now() - (this.#tilt.fused ?? -Infinity) < 500) return;
+    this.#up(g.x / 9.81, g.y / 9.81, false);
+  }
+
+  #up(x, y, trusted) {
     // Into screen axes (x right, y up), whichever way round the phone is.
     const angle = ((screen.orientation?.angle ?? window.orientation ?? 0) * Math.PI) / 180;
-    const sx = g.x * Math.cos(angle) - g.y * Math.sin(angle);
-    const sy = g.x * Math.sin(angle) + g.y * Math.cos(angle);
-    if (Math.hypot(sx, sy) < 2.5) return; // lying flat: no wheel to read
+    const sx = x * Math.cos(angle) - y * Math.sin(angle);
+    const sy = x * Math.sin(angle) + y * Math.cos(angle);
+    if (Math.hypot(sx, sy) < 0.25) return; // lying flat: no wheel to read
     const t = this.#tilt;
-    // Browsers disagree on the sign of these readings; held up in front of
-    // you, "up" should point up the screen.
-    if (t.zero === null) t.flip = sy < 0 ? -1 : 1;
+    // Browsers disagree on the sign of accelerometer readings; held up in
+    // front of you, "up" should point up the screen.
+    if (t.zero === null) t.flip = trusted || sy >= 0 ? 1 : -1;
     const turn = Math.atan2(-sx * t.flip, sy * t.flip); // clockwise is positive
     if (t.zero === null) t.zero = turn;
     const d = Math.atan2(Math.sin(turn - t.zero), Math.cos(turn - t.zero));
