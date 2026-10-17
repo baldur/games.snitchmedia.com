@@ -116,6 +116,9 @@ export class Controls {
     return this.#tilt.on && this.#tilt.at !== null && performance.now() - this.#tilt.at < 1000;
   }
 
+  // The rudder as last taken, for the HUD.
+  rudder = 0;
+
   // Touch play without tilt: main.js should balance the boat for the player.
   get assist() {
     return this.#touching && !this.tilting && !this.#pad;
@@ -204,9 +207,10 @@ export class Controls {
     const keyRudder = (this.#held.has(KEYS.rudderRight) ? 1 : 0) - (this.#held.has(KEYS.rudderLeft) ? 1 : 0);
     const strokes = this.#strokes;
     this.#strokes = [];
+    this.rudder = clamp(keyRudder + axis(0) + this.#dragRudder);
     return {
       strokes,
-      rudder: clamp(keyRudder + axis(0) + this.#dragRudder),
+      rudder: this.rudder,
       lean: clamp(this.#keyLean + axis(2) + (this.tilting ? this.#tilt.lean : 0)),
     };
   }

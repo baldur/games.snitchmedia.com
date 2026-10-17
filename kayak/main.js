@@ -43,7 +43,7 @@ const menu = document.getElementById('menu');
 const paused = document.getElementById('paused');
 const finished = document.getElementById('finished');
 const flash = document.getElementById('flash');
-const els = Object.fromEntries(['clock', 'togo', 'pos', 'wash', 'speed', 'rate', 'stamina', 'rhythm', 'needle', 'best', 'result', 'details', 'standings', 'nogpu']
+const els = Object.fromEntries(['clock', 'togo', 'pos', 'wash', 'speed', 'rate', 'stamina', 'rhythm', 'needle', 'rudder', 'cueL', 'cueR', 'best', 'result', 'details', 'standings', 'nogpu']
   .map((id) => [id, document.getElementById(id)]));
 
 const controls = new Controls(canvas);
@@ -604,8 +604,29 @@ function updateHud(dt) {
   els.rhythm.style.transform = `scaleX(${boat.rhythm.toFixed(3)})`;
   els.rhythm.parentElement.classList.toggle('locked', boat.rhythm > 0.9);
   hud.classList.toggle('assisted', controls.assist);
+  // On phones, the controls in a line until a little way into the race.
+  hud.classList.toggle('helping', phone.matches && (state === 'start' || (state === 'racing' && race.time < 6)));
+  showBeat(boat);
+  els.rudder.style.transform = `translateX(${(controls.rudder * 39).toFixed(1)}px)`;
   const angle = Math.max(-1.1, Math.min(1.1, boat.roll / BOAT.capsize)) * 90;
   els.needle.style.transform = `rotate(${angle.toFixed(1)}deg)`;
+}
+
+// The beat cue: the side to stroke next lights up, and its ring closes in on
+// the moment your beat says it's due (a racing 86 a minute until you have one).
+function showBeat(boat) {
+  const beat = Math.min(0.85, Math.max(0.62, boat.beat ?? 0.7));
+  const since = boat.time - boat.lastStroke;
+  const nextSide = boat.lastSide === 'left' ? 'right' : 'left';
+  const waiting = since > beat * 1.8; // stopped: just show where to start
+  const left = Math.max(0, beat - since);
+  const window = beat * boat.hull.rhythmSlop;
+  for (const [cue, side] of [[els.cueL, 'left'], [els.cueR, 'right']]) {
+    const next = side === nextSide;
+    cue.classList.toggle('next', next);
+    cue.classList.toggle('now', next && !waiting && Math.abs(since - beat) < window);
+    if (next) cue.firstElementChild.style.transform = `scale(${waiting ? 1 : (1 + 1.4 * left / beat).toFixed(3)})`;
+  }
 }
 
 // --- main loop ---------------------------------------------------------------

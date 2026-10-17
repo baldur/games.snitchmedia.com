@@ -27,17 +27,23 @@
     </div>
     <p id="wash">On the wash</p>
     <p id="assisted">Balance assist on: tilt isn't available</p>
+    <p id="touchhelp">Tap left, then right, when the ring closes · Slide a finger sideways to steer · Turn the phone to lean</p>
+    <div class="cue left" id="cueL" aria-hidden="true"><span class="ring"></span>L</div>
+    <div class="cue right" id="cueR" aria-hidden="true"><span class="ring"></span>R</div>
     <div class="hud-bottom">
       <div class="readout">
         <span><b id="speed">0.0</b> km/h</span>
         <span><b id="rate">0</b> strokes/min</span>
       </div>
-      <svg id="balance" viewBox="0 0 200 110" aria-hidden="true">
-        <path class="arc" d="M 20 100 A 80 80 0 0 1 180 100" />
-        <path class="danger" d="M 20 100 A 80 80 0 0 1 38.6 48.6" />
-        <path class="danger" d="M 161.4 48.6 A 80 80 0 0 1 180 100" />
-        <g id="needle"><line x1="100" y1="100" x2="100" y2="30" /><circle cx="100" cy="100" r="6" /></g>
-      </svg>
+      <div class="gauges">
+        <svg id="balance" viewBox="0 0 200 110" aria-hidden="true">
+          <path class="arc" d="M 20 100 A 80 80 0 0 1 180 100" />
+          <path class="danger" d="M 20 100 A 80 80 0 0 1 38.6 48.6" />
+          <path class="danger" d="M 161.4 48.6 A 80 80 0 0 1 180 100" />
+          <g id="needle"><line x1="100" y1="100" x2="100" y2="30" /><circle cx="100" cy="100" r="6" /></g>
+        </svg>
+        <div class="rudder" aria-hidden="true"><span id="rudder"></span></div>
+      </div>
       <div class="meters">
         <span>Rhythm</span>
         <div class="bar rhythm"><div id="rhythm"></div></div>
@@ -76,7 +82,7 @@
         <li>Tuck in right behind a boat, or alongside its back half, to ride its wash: you go further for less effort, but the boat rocks more</li>
         <li>Race distances and times are shown four times longer than you actually paddle, so a 6 km race takes about 7 minutes</li>
         <li>Gamepad: <kbd>LT</kbd> <kbd>RT</kbd> strokes, left stick rudder, right stick lean</li>
-        <li>Phone, held sideways: tap the left or right half of the screen to stroke, and slide a finger that's down left or right to steer. Turn the phone like a steering wheel to shift your weight: when the boat dips one way, lean the other, as you would in a real kayak. (Tilt needs the page over HTTPS on iPhone; without it, balance is done for you)</li>
+        <li>Phone, held sideways: tap the left or right half of the screen to stroke, in time with the rings at the sides. To steer, put a finger down and slide it left or right; the bar under the balance gauge shows your rudder. Turn the phone like a steering wheel to shift your weight: when the boat dips one way, lean the other, as you would in a real kayak. (Tilt needs the page over HTTPS on iPhone; without it, balance is done for you)</li>
         <li><kbd>P</kbd> or <kbd>Esc</kbd> to pause, <kbd>M</kbd> to toggle sound</li>
       </ul>
     </details>

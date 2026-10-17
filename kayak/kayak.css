@@ -132,7 +132,53 @@ header button {
   #balance { width: 110px; }
   .readout b { font-size: 1.2rem; }
   #assisted { bottom: 5.5rem; }
+  #touchhelp { top: 3.9rem; font-size: 0.75rem; }
+  .cue { width: 48px; height: 48px; }
 }
+
+/* The beat: the ring on the side to stroke next closes in on the moment. */
+.cue {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid rgb(255 255 255 / 0.35);
+  font-weight: 700;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.cue.left { left: 16px; }
+.cue.right { right: 16px; }
+.cue.next { opacity: 1; }
+.cue.now { background: rgb(180 140 255 / 0.45); border-color: #fff; }
+.cue .ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 3px solid #b48cff;
+  opacity: 0;
+}
+.cue.next .ring { opacity: 1; }
+
+.gauges { display: grid; justify-items: center; gap: 4px; }
+.rudder { position: relative; width: 90px; height: 6px; border-radius: 3px; background: rgb(0 0 0 / 0.35); }
+.rudder span { position: absolute; top: -3px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: #fff; }
+
+#touchhelp {
+  position: absolute;
+  top: 6.2rem;
+  inset-inline: 16px;
+  margin: 0;
+  text-align: center;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  display: none;
+}
+#hud.helping #touchhelp { display: block; }
 
 #tiltdebug {
   position: fixed;

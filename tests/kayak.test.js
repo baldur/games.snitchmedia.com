@@ -63,16 +63,18 @@ test('alternating strokes paddle upright', () => {
 });
 
 test('a faster rhythm is faster, but drains stamina', () => {
-  const sprint = paddle(15, { interval: 0.5, lean: balance }).boat;
+  const sprint = paddle(15, { interval: 0.52, lean: balance }).boat;
   const cruise = paddle(15, { interval: 0.75, lean: balance }).boat;
-  assert.ok(kmh(0.5, 15) > kmh(0.75, 15) + 1.5);
+  assert.ok(kmh(0.52, 15) > kmh(0.75, 15) + 1.5);
   assert.ok(sprint.stamina < cruise.stamina - 0.2);
   assert.ok(paddle(60, { lean: balance }).boat.stamina > 0.95, 'a racing rhythm is sustainable');
 });
 
-test('hammering faster than the blade can catch is weak', () => {
-  const { events } = paddle(3, { interval: 0.2, lean: balance });
-  assert.ok(events.filter((e) => e === 'weak').length > events.filter((e) => e === 'stroke').length);
+test('hammering faster than the blade can move gets you nowhere', () => {
+  const frantic = paddle(10, { interval: 0.2, lean: balance }).boat;
+  assert.ok(strokeRate(frantic) <= 150, `rate ${strokeRate(frantic)}`);
+  assert.ok(frantic.rhythm < 0.3, 'rushing breaks the rhythm');
+  assert.ok(kmh(0.2, 10) < kmh(0.7, 10), 'and it is slower than a steady racing beat');
 });
 
 test('two strokes on the same side are weak and turn the boat', () => {

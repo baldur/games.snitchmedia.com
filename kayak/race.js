@@ -14,7 +14,7 @@ const BEAM = 0.48; // closest two hulls can get
 const LANE = 1.75; // spacing on the start line: blades all but touching
 const GAPS = 2; // open places the rivals leave on the line
 const BEHIND = 14; // how far back from the line you start, metres
-const RACE_PACE = 1.06; // rivals' racing beat, against the beat they could hold for ever
+const RACE_PACE = 1.09; // rivals' racing beat, against the beat they could hold for ever
 
 // Division 9, the entry division: a start line of twelve club paddlers in
 // all sorts of boats. Pace scales their usual beat (below 1 is quicker, and

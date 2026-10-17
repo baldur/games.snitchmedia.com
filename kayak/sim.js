@@ -7,7 +7,8 @@ export const BOAT = {
   // marathon paddling, counting every blade: about 10 km/h at an easy 60,
   // 13 km/h at a racing 85-90, and 14-15 km/h sprinting at 100-110.
   impulse: 0.7, // m/s from a clean stroke at full stamina
-  minInterval: 0.5, // strokes closer together than this catch less water
+  minInterval: 0.5, // strokes closer together than this catch less water, and rush the rhythm
+  minGap: 0.4, // a stroke can't start while the last blade is still in the water: 150 a minute at most
   sameSide: 0.45, // power of a second stroke on the same side
   drag: 0.067, // quadratic
   linearDrag: 0.02,
@@ -54,8 +55,8 @@ export const BOAT = {
   // `rhythmBase` of their power, so finding your beat again after a bend or a
   // move onto someone's wash costs a burst of effort.
   rhythmGain: 0.1, // per stroke right on the beat
-  rhythmSlop: 0.15, // how far off the beat (as a fraction) still counts
-  rhythmBase: 0.6,
+  rhythmSlop: 0.2, // how far off the beat (as a fraction) still counts
+  rhythmBase: 0.65,
   slowBeat: 0.8, // seconds per stroke: a lazier beat than this caps your rhythm
   steerCost: 0.2, // rhythm lost per second of full rudder, which also stops it building
   fallCost: 0.4, // capsizing also costs this much stamina-equivalent speed
@@ -68,13 +69,13 @@ export const HULLS = {
   stable: {
     ...BOAT, name: 'Stable', beam: 1.3,
     drag: 0.074, tip: 2.5, stabilitySpeed: 0.6,
-    rhythmBase: 0.75, slowBeat: 0.92, swimTime: 3, fallCost: 0.3,
+    rhythmBase: 0.75, rhythmSlop: 0.25, slowBeat: 0.92, swimTime: 3, fallCost: 0.3,
   },
   club: { ...BOAT, name: 'Club racer' },
   racing: {
     ...BOAT, name: 'Racing', beam: 0.8,
     drag: 0.06, tip: 3.6, stabilityStill: 2.4, brace: 0.6,
-    rhythmBase: 0.45, slowBeat: 0.74, rhythmSlop: 0.12, swimTime: 5, fallCost: 0.55,
+    rhythmBase: 0.5, slowBeat: 0.74, rhythmSlop: 0.14, swimTime: 5, fallCost: 0.55,
   },
 };
 
@@ -123,7 +124,9 @@ export function step(boat, dt, input) {
     return events;
   }
 
-  for (const side of input.strokes ?? []) events.push(stroke(boat, side, input.draft ?? 0));
+  for (const side of input.strokes ?? []) {
+    if (boat.time - boat.lastStroke >= H.minGap) events.push(stroke(boat, side, input.draft ?? 0));
+  }
 
   boat.stamina = Math.min(1, boat.stamina + H.recover * boat.endurance * dt);
   const drag = 1 - H.draft * (input.draft ?? 0);
@@ -197,6 +200,8 @@ function keepTime(boat, gap, repeat) {
   const H = boat.hull;
   if (repeat) {
     boat.rhythm -= 0.2;
+  } else if (gap < H.minInterval) {
+    boat.rhythm -= 0.15; // rushing: snatching at the water instead of driving through it
   } else if (!boat.beat || gap > boat.beat * 2) {
     if (boat.beat) boat.rhythm -= 0.25;
     boat.beat = Math.min(gap, 1.3); // starting up: this gap is the first guess at a beat
