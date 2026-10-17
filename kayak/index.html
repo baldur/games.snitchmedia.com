@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kayak</title>
+  <link rel="icon" href="../favicon.svg">
+  <link rel="stylesheet" href="../shared/site.css">
+  <link rel="stylesheet" href="kayak.css">
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <canvas id="view" aria-label="First-person view from the kayak"></canvas>
+
+  <header>
+    <a href="../">&larr; Games</a>
+    <h1>Kayak</h1>
+    <button id="pause" type="button">Pause</button>
+    <button id="sound" type="button" aria-pressed="true">Sound on</button>
+  </header>
+
+  <div id="hud" hidden>
+    <div class="hud-top">
+      <span id="clock">0:00.0</span>
+      <span id="togo">1000 m</span>
+    </div>
+    <div class="hud-bottom">
+      <div class="readout">
+        <span><b id="speed">0.0</b> km/h</span>
+        <span><b id="rate">0</b> strokes/min</span>
+      </div>
+      <svg id="balance" viewBox="0 0 200 110" aria-hidden="true">
+        <path class="arc" d="M 20 100 A 80 80 0 0 1 180 100" />
+        <path class="danger" d="M 20 100 A 80 80 0 0 1 38.6 48.6" />
+        <path class="danger" d="M 161.4 48.6 A 80 80 0 0 1 180 100" />
+        <g id="needle"><line x1="100" y1="100" x2="100" y2="30" /><circle cx="100" cy="100" r="6" /></g>
+      </svg>
+      <div class="stamina">
+        <span>Stamina</span>
+        <div class="bar"><div id="stamina"></div></div>
+      </div>
+    </div>
+    <p id="flash" aria-live="assertive"></p>
+  </div>
+
+  <dialog id="menu">
+    <h2>Kayak</h2>
+    <p class="lede">A first-person marathon kayak. This is the practice river: a 1 km time trial while the racing gets built.</p>
+    <form method="dialog">
+      <button value="practice" autofocus>Practice time trial <small>1 km</small></button>
+    </form>
+    <p id="best"></p>
+    <p id="nogpu" class="warning" hidden></p>
+    <details>
+      <summary>Controls</summary>
+      <ul>
+        <li><kbd>&larr;</kbd> <kbd>&rarr;</kbd> paddle strokes. Alternate them, and find a rhythm: hammering too fast catches less water, and two on one side is a weak steering stroke</li>
+        <li><kbd>A</kbd> <kbd>D</kbd> lean to keep your balance. Standing still is wobbly; speed steadies you</li>
+        <li><kbd>Q</kbd> <kbd>E</kbd> rudder. It only bites when you're moving</li>
+        <li>Gamepad: <kbd>LT</kbd> <kbd>RT</kbd> strokes, left stick rudder, right stick lean</li>
+        <li>Touch: tap the left or right half of the screen to stroke</li>
+        <li><kbd>P</kbd> or <kbd>Esc</kbd> to pause, <kbd>M</kbd> to toggle sound</li>
+      </ul>
+    </details>
+    <p class="dialog-links"><a href="../">&larr; All games</a></p>
+  </dialog>
+
+  <dialog id="paused">
+    <h2>Paused</h2>
+    <form method="dialog">
+      <button value="resume" autofocus>Resume</button>
+      <button value="restart">Restart</button>
+      <button value="menu">Quit to menu</button>
+    </form>
+  </dialog>
+
+  <dialog id="finished">
+    <h2 id="result"></h2>
+    <p id="details"></p>
+    <form method="dialog">
+      <button value="again" autofocus>Go again</button>
+      <button value="menu">Menu</button>
+    </form>
+  </dialog>
+</body>
+</html>

@@ -36,3 +36,25 @@ export function tone({ freq, to = freq, duration = 0.08, type = 'square', gain =
   osc.start(t);
   osc.stop(t + duration);
 }
+
+// Filtered white noise with a decaying envelope: splashes, wind, crowds.
+// `to` sweeps the filter frequency over the duration.
+let noiseBuffer = null;
+export function noise({ freq = 1000, to = freq, q = 1, duration = 0.2, gain = 0.15, type = 'bandpass' }) {
+  if (muted || !ctx || ctx.state !== 'running') return;
+  if (!noiseBuffer) {
+    noiseBuffer = new AudioBuffer({ length: ctx.sampleRate, sampleRate: ctx.sampleRate });
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  }
+  const t = ctx.currentTime;
+  const src = new AudioBufferSourceNode(ctx, { buffer: noiseBuffer, loop: true });
+  const filter = new BiquadFilterNode(ctx, { type, frequency: freq, Q: q });
+  const amp = new GainNode(ctx, { gain });
+  if (to !== freq) filter.frequency.exponentialRampToValueAtTime(to, t + duration);
+  amp.gain.setValueAtTime(gain, t);
+  amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+  src.connect(filter).connect(amp).connect(ctx.destination);
+  src.start(t, Math.random());
+  src.stop(t + duration);
+}
