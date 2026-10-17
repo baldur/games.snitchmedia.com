@@ -19,7 +19,7 @@ The 2026 revival is being built in collaboration with [Claude Code](https://clau
 | Game | Status | Platform features |
 | --- | --- | --- |
 | [Pong](pong/) | Rebuilt 2026 | Canvas 2D, Gamepad API, Web Audio, Pointer Events, Vibration, `<dialog>` |
-| [Snake](classic/snake/) | Classic only | Web Worker |
+| [Snake](snake/) | Rebuilt 2026 | Canvas 2D, module Web Worker (attract-mode AI), Device Orientation (tilt steering), Screen Wake Lock, Gamepad API, Web Audio, Pointer Events (swipe), Vibration, `<dialog>` |
 | [Bricks](classic/bricks/) | Classic only | |
 | [Connect Four](classic/connect_four/) | Classic only | |
 | [Tic Tac Toe](classic/tic-tac-toe/) | Classic only | |
