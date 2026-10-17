@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connect Four</title>
+  <link rel="icon" href="../favicon.svg">
+  <link rel="stylesheet" href="../shared/site.css">
+  <link rel="stylesheet" href="../shared/game.css">
+  <link rel="stylesheet" href="connect-four.css">
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+  <header>
+    <a href="../">&larr; Games</a>
+    <h1>Connect Four</h1>
+    <a href="../classic/connect_four/">2010 version</a>
+    <button id="new" type="button">New game</button>
+    <button id="sound" type="button" aria-pressed="true">Sound on</button>
+  </header>
+
+  <ul class="players">
+    <li class="player" data-player="1"><span class="chip p1"></span> Red <small></small></li>
+    <li class="player" data-player="2"><span class="chip p2"></span> Yellow <small></small></li>
+  </ul>
+
+  <!-- Built by main.js: one focusable button per column, holding that column's discs. -->
+  <div id="board" class="board" role="group" aria-label="Connect Four board, 7 columns by 6 rows"></div>
+  <p id="status" class="status" aria-live="polite"></p>
+
+  <dialog id="menu">
+    <h2>Connect Four</h2>
+    <form method="dialog">
+      <button value="easy" autofocus>Easy <small>against the computer</small></button>
+      <button value="medium">Medium <small>the computer thinks a few moves ahead</small></button>
+      <button value="hard">Hard <small>the computer looks nine moves ahead</small></button>
+      <button value="2">2 players <small>take turns on one device</small></button>
+    </form>
+    <details>
+      <summary>Controls</summary>
+      <ul>
+        <li>Click or tap a column to drop a disc there</li>
+        <li><kbd>&larr;</kbd> / <kbd>&rarr;</kbd> to choose a column, <kbd>Enter</kbd>, <kbd>Space</kbd> or <kbd>&darr;</kbd> to drop</li>
+        <li><kbd>1</kbd>&ndash;<kbd>7</kbd> drop straight into that column</li>
+        <li>Gamepad: d-pad or stick left / right, <kbd>A</kbd> to drop, <kbd>Start</kbd> for this menu</li>
+        <li><kbd>Esc</kbd> for this menu, <kbd>M</kbd> to toggle sound</li>
+      </ul>
+      <p>Get four of your discs in a row: across, up or diagonally.</p>
+    </details>
+  </dialog>
+
+  <dialog id="over">
+    <h2 id="result"></h2>
+    <form method="dialog">
+      <button value="again" autofocus>Play again</button>
+      <button value="menu">Menu</button>
+    </form>
+  </dialog>
+</body>
+</html>

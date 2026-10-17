@@ -21,7 +21,7 @@ The 2026 revival is being built in collaboration with [Claude Code](https://clau
 | [Pong](pong/) | Rebuilt 2026 | Canvas 2D, Gamepad API, Web Audio, Pointer Events, Vibration, `<dialog>` |
 | [Snake](classic/snake/) | Classic only | Web Worker |
 | [Bricks](classic/bricks/) | Classic only | |
-| [Connect Four](classic/connect_four/) | Classic only | |
+| [Connect Four](connect-four/) | Rebuilt 2026 | DOM + CSS grid board, Web Animations, module Web Worker (minimax AI), Gamepad API, Web Audio, Vibration, `aria-live`, `<dialog>` |
 | [Tic Tac Toe](classic/tic-tac-toe/) | Classic only | |
 
 ## The rules
