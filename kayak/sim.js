@@ -4,22 +4,24 @@
 
 export const BOAT = {
   // Strokes: each one adds speed; drag takes it away again. Tuned to real K1
-  // marathon paddling, counting every blade: about 10 km/h at an easy 65-70
-  // strokes a minute, 12-13 km/h at a racing 95-100, and 14-15 km/h sprinting
-  // at a little over 110.
-  impulse: 0.62, // m/s from a clean stroke at full stamina
-  minInterval: 0.45, // strokes closer together than this catch less water
+  // marathon paddling, counting every blade: about 10 km/h at an easy 60,
+  // 13 km/h at a racing 85-90, and 14-15 km/h sprinting at 100-110.
+  impulse: 0.7, // m/s from a clean stroke at full stamina
+  minInterval: 0.5, // strokes closer together than this catch less water
   sameSide: 0.45, // power of a second stroke on the same side
   drag: 0.067, // quadratic
   linearDrag: 0.02,
-  strokeTime: 0.45, // how long the blade is in the water
+  strokeTime: 0.5, // how long the blade is in the water
 
   // Stamina: drains with every stroke, recovers all the time. A quicker stroke
   // costs more (with the square of the rate), and the two balance at
-  // `costBeat`, about 97 a minute: faster than that eats into your reserve.
-  cost: 0.017,
-  costBeat: 0.62,
-  recover: 0.017 / 0.62,
+  // `costBeat`, about 91 a minute: a racing rhythm just below that slowly
+  // builds a reserve, and sprinting spends it. Riding a wash, each stroke
+  // costs up to `draftSaving` less.
+  cost: 0.011,
+  costBeat: 0.66,
+  recover: 0.011 / 0.66,
+  draftSaving: 0.5,
 
   // Steering: the rudder needs speed to bite; strokes nudge the bow.
   rudder: 0.16, // target yaw rate per m/s of speed
@@ -54,7 +56,7 @@ export const BOAT = {
   rhythmGain: 0.1, // per stroke right on the beat
   rhythmSlop: 0.15, // how far off the beat (as a fraction) still counts
   rhythmBase: 0.6,
-  slowBeat: 0.72, // seconds per stroke: a lazier beat than this caps your rhythm
+  slowBeat: 0.8, // seconds per stroke: a lazier beat than this caps your rhythm
   steerCost: 0.2, // rhythm lost per second of full rudder, which also stops it building
   fallCost: 0.4, // capsizing also costs this much stamina-equivalent speed
   beam: 1, // hull width, for the mesh
@@ -66,13 +68,13 @@ export const HULLS = {
   stable: {
     ...BOAT, name: 'Stable', beam: 1.3,
     drag: 0.074, tip: 2.5, stabilitySpeed: 0.6,
-    rhythmBase: 0.75, slowBeat: 0.85, swimTime: 3, fallCost: 0.3,
+    rhythmBase: 0.75, slowBeat: 0.92, swimTime: 3, fallCost: 0.3,
   },
   club: { ...BOAT, name: 'Club racer' },
   racing: {
     ...BOAT, name: 'Racing', beam: 0.8,
     drag: 0.06, tip: 3.6, stabilityStill: 2.4, brace: 0.6,
-    rhythmBase: 0.45, slowBeat: 0.66, rhythmSlop: 0.12, swimTime: 5, fallCost: 0.55,
+    rhythmBase: 0.45, slowBeat: 0.74, rhythmSlop: 0.12, swimTime: 5, fallCost: 0.55,
   },
 };
 
@@ -121,7 +123,7 @@ export function step(boat, dt, input) {
     return events;
   }
 
-  for (const side of input.strokes ?? []) events.push(stroke(boat, side));
+  for (const side of input.strokes ?? []) events.push(stroke(boat, side, input.draft ?? 0));
 
   boat.stamina = Math.min(1, boat.stamina + H.recover * boat.endurance * dt);
   const drag = 1 - H.draft * (input.draft ?? 0);
@@ -160,7 +162,7 @@ export function step(boat, dt, input) {
   return events;
 }
 
-function stroke(boat, side) {
+function stroke(boat, side, draft) {
   const H = boat.hull;
   const gap = boat.time - boat.lastStroke;
   let quality = Math.min(1, gap / H.minInterval);
@@ -173,7 +175,8 @@ function stroke(boat, side) {
   boat.speed += H.impulse * boat.power * quality * (H.rhythmBase + (1 - H.rhythmBase) * boat.rhythm);
   boat.yawRate += dir * H.strokeYaw * (repeat ? 2.5 : 1) * Math.max(quality, 0.3);
   boat.rollRate += -dir * H.strokeRoll * (repeat ? 2 : 1);
-  boat.stamina = Math.max(0, boat.stamina - H.cost * (H.costBeat / Math.max(gap, H.minInterval)) ** 2);
+  const effort = (H.costBeat / Math.max(gap, H.minInterval)) ** 2 * (1 - H.draftSaving * draft);
+  boat.stamina = Math.max(0, boat.stamina - H.cost * effort);
 
   boat.lastSide = side;
   boat.lastStroke = boat.time;

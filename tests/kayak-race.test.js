@@ -58,7 +58,7 @@ test('riding a wash is faster for the same effort', () => {
     let side = 'left';
     for (let t = 0; t < 30; t += DT) {
       const strokes = [];
-      if (t >= next) { strokes.push(side); side = side === 'left' ? 'right' : 'left'; next += 0.62; }
+      if (t >= next) { strokes.push(side); side = side === 'left' ? 'right' : 'left'; next += 0.7; }
       step(boat, DT, { strokes, lean: balance(boat), draft });
     }
     return boat.speed;

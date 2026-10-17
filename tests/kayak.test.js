@@ -6,7 +6,7 @@ import { practiceRiver, raceRiver, locate, pointAt, headingAt, widthAt } from '.
 const DT = 1 / 120;
 
 // Paddles on a fixed beat for `seconds`; `lean` is a function of the boat.
-function paddle(seconds, { interval = 0.62, sides = ['left', 'right'], lean = () => 0, rudder = 0, boat = createBoat() } = {}) {
+function paddle(seconds, { interval = 0.7, sides = ['left', 'right'], lean = () => 0, rudder = 0, boat = createBoat() } = {}) {
   let next = 0;
   let n = 0;
   const events = [];
@@ -47,14 +47,14 @@ function kmh(interval, seconds) {
 }
 
 test('speeds and stroke rates match real K1 marathon paddling', () => {
-  const easy = paddle(25, { interval: 0.9, lean: balance }).boat;
+  const easy = paddle(25, { interval: 1, lean: balance }).boat;
   const racing = paddle(25, { lean: balance }).boat;
-  assert.ok(Math.abs(strokeRate(easy) - 67) <= 3, `easy rate ${strokeRate(easy)}`);
-  assert.ok(Math.abs(strokeRate(racing) - 97) <= 3, `racing rate ${strokeRate(racing)}`);
-  const speeds = { easy: kmh(0.9, 25), racing: kmh(0.62, 25), sprint: kmh(0.52, 15) };
+  assert.ok(Math.abs(strokeRate(easy) - 60) <= 3, `easy rate ${strokeRate(easy)}`);
+  assert.ok(Math.abs(strokeRate(racing) - 86) <= 3, `racing rate ${strokeRate(racing)}`);
+  const speeds = { easy: kmh(1, 25), racing: kmh(0.7, 25), sprint: kmh(0.56, 15) };
   assert.ok(speeds.easy > 9 && speeds.easy < 11, `easy ${speeds.easy}`);
   assert.ok(speeds.racing > 12.5 && speeds.racing < 14, `racing ${speeds.racing}`);
-  assert.ok(speeds.sprint > speeds.racing + 0.3 && speeds.sprint < 16, `sprint ${speeds.sprint}`);
+  assert.ok(speeds.sprint > speeds.racing + 0.8 && speeds.sprint < 16, `sprint ${speeds.sprint}`);
 });
 
 test('alternating strokes paddle upright', () => {
@@ -67,7 +67,7 @@ test('a faster rhythm is faster, but drains stamina', () => {
   const cruise = paddle(15, { interval: 0.75, lean: balance }).boat;
   assert.ok(kmh(0.5, 15) > kmh(0.75, 15) + 1.5);
   assert.ok(sprint.stamina < cruise.stamina - 0.2);
-  assert.ok(paddle(60, { interval: 0.62, lean: balance }).boat.stamina > 0.95, 'a racing rhythm is sustainable');
+  assert.ok(paddle(60, { lean: balance }).boat.stamina > 0.95, 'a racing rhythm is sustainable');
 });
 
 test('hammering faster than the blade can catch is weak', () => {
@@ -106,7 +106,7 @@ test('balance is easier at speed: hands-off you last much longer moving', () => 
     }
     return Infinity;
   };
-  assert.ok(firstCapsize(0.62) > firstCapsize(0) * 2);
+  assert.ok(firstCapsize(0.7) > firstCapsize(0) * 2);
 });
 
 test('a capsize stops you, then you climb back in', () => {
@@ -138,13 +138,33 @@ test('a steady beat builds rhythm, and rhythm is speed', () => {
   const ragged = createBoat();
   let t = 0;
   for (let n = 0; t < 15; n++) {
-    const gap = n % 2 ? 0.47 : 0.77;
+    const gap = n % 2 ? 0.55 : 0.85;
     for (let s = 0; s < gap; s += DT, t += DT) {
       step(ragged, DT, { strokes: s === 0 ? [n % 2 ? 'left' : 'right'] : [], lean: balance(ragged) });
     }
   }
   assert.ok(ragged.rhythm < 0.3, `ragged rhythm ${ragged.rhythm}`);
   assert.ok(steady.speed > ragged.speed + 0.4);
+});
+
+test('riding a wash costs less stamina', () => {
+  const sprint = (draft) => {
+    const boat = createBoat();
+    let next = 0;
+    let n = 0;
+    for (let t = 0; t < 20; t += DT) {
+      const strokes = [];
+      if (t >= next) {
+        strokes.push(n++ % 2 ? 'right' : 'left');
+        next += 0.55;
+      }
+      step(boat, DT, { strokes, lean: balance(boat), draft });
+    }
+    return boat.stamina;
+  };
+  const alone = 1 - sprint(0);
+  const sheltered = 1 - sprint(1);
+  assert.ok(sheltered < alone * 0.5, `spent ${sheltered} on the wash vs ${alone} alone`);
 });
 
 test('steering hard breaks your rhythm', () => {
@@ -160,7 +180,7 @@ test('a narrow racing hull is faster, a wide one steadier', () => {
   // Hands off the balance, at a gentle paddle: how long until you fall in?
   const upright = (hull) => {
     const boat = createBoat({ hull });
-    const { events } = paddle(60, { interval: 0.8, boat });
+    const { events } = paddle(60, { interval: 0.9, boat });
     return events.filter((e) => e === 'capsize').length;
   };
   assert.ok(upright('racing') > upright('stable'));

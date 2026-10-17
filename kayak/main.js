@@ -359,28 +359,42 @@ function boatFrame(b) {
 }
 
 // Where the player's paddle is in boat space, seen from the cockpit. It rests
-// low across the deck, just out of view, and each stroke lifts it into a
-// diagonal: the working blade plants by the bow and pulls back.
+// low across the deck, just out of view. A stroke reaches forward and spears
+// the working blade in by the bow, then the blade holds in the water while
+// the boat drives past it, back to the hip, where it lifts out to the side.
+// Also returns `reach`: how far the paddler's body leans into the catch.
 function paddlePose(b) {
   const t = b.time - b.paddle.at;
-  const dir = b.paddle.side === 'left' ? 1 : -1;
-  const REST = { y: 0.16, z: -0.6 };
-  let tilt = 0;
-  let y = REST.y;
-  let z = REST.z;
-  let yaw = 0;
+  const dir = b.paddle.side === 'left' ? 1 : -1; // working blade at -x for a left stroke
+  const REST = { y: 0.16, z: -0.6, yaw: 0, tilt: 0 };
+  // depth 0..1: how far the blade is buried.
+  const pose = (p) => {
+    const depth = p < 0.12 ? smooth(p / 0.12) : 1 - smooth((p - 0.8) / 0.2);
+    const drive = smooth((p - 0.08) / 0.75);
+    return {
+      depth,
+      tilt: dir * (0.3 + 0.5 * depth), // shaft steep, top hand high
+      y: 0.2 + 0.26 * depth,
+      z: -0.8 + 0.9 * drive, // hands come back past you as the boat runs on
+      yaw: dir * (-0.45 + 0.6 * drive), // the working blade starts forward
+    };
+  };
+  let p = REST;
+  let reach = 0;
   if (b.paddle.side && t < BOAT.strokeTime) {
-    const p = t / BOAT.strokeTime;
-    const arc = Math.sin(Math.PI * Math.min(1, p * 1.15));
-    tilt = dir * 0.72 * arc;
-    y = REST.y + 0.24 * arc;
-    z = -1.0 + 1.2 * p;
-    yaw = dir * 0.35 * (1 - 2 * p);
-  } else if (b.paddle.side && t < BOAT.strokeTime + 0.25) {
-    const e = 1 - (1 - (t - BOAT.strokeTime) / 0.25) ** 2;
-    z = 0.2 + (REST.z - 0.2) * e;
+    p = pose(t / BOAT.strokeTime);
+    reach = 1 - smooth(t / (BOAT.strokeTime * 0.6));
+  } else if (b.paddle.side && t < BOAT.strokeTime + 0.3) {
+    // Recovery: swing back to rest across the deck, ready for the other side.
+    const from = pose(1);
+    const k = smooth((t - BOAT.strokeTime) / 0.3);
+    p = Object.fromEntries(Object.keys(REST).map((key) => [key, from[key] + (REST[key] - from[key]) * k]));
+    reach = 0;
   }
-  return multiply(translation(0, y, z), multiply(rotationZ(tilt), rotationY(yaw)));
+  return {
+    matrix: multiply(translation(0, p.y, p.z), multiply(rotationZ(p.tilt), rotationY(p.yaw))),
+    reach,
+  };
 }
 
 // A rival's paddle through a real stroke, in boat space. The blade is planted
@@ -456,7 +470,7 @@ function placeRacers() {
     const set = meshes.racers[liveries.get(r)];
     renderer.place(kayakFor(r), [model]);
     if (r === race.player) {
-      paddles.push(multiply(model, paddlePose(r.boat)));
+      paddles.push(multiply(model, paddlePose(r.boat).matrix));
       continue;
     }
     // The paddler twists with the stroke; hands stay on the shaft.
@@ -479,10 +493,12 @@ function render(time) {
   const boat = race.player.boat;
   const fr = boatFrame(boat);
 
-  // Eye just behind the cockpit, pitched down a touch to see the bow.
+  // Eye just behind the cockpit, pitched down a touch to see the bow. You
+  // lean into each catch, and the boat surges on under you as you drive.
   const bob = 0.012 * Math.sin(boat.time * 7) * Math.min(1, boat.speed / 3);
   const lift = boat.swim > 0 ? -0.45 : 0;
-  const eye = fr.pos.map((p, i) => p + fr.up[i] * (EYE_HEIGHT + bob + lift) + fr.back[i] * 0.15);
+  const lean = 0.06 * paddlePose(boat).reach;
+  const eye = fr.pos.map((p, i) => p + fr.up[i] * (EYE_HEIGHT + bob + lift - lean * 0.3) + fr.back[i] * (0.15 - lean));
   const pitch = 0.11;
   const fwd = normalize(fr.f.map((v, i) => v * Math.cos(pitch) - fr.up[i] * Math.sin(pitch)));
   const up = normalize(fr.up.map((v, i) => v * Math.cos(pitch) + fr.f[i] * Math.sin(pitch)));

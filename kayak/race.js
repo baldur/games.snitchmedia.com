@@ -14,10 +14,11 @@ const BEAM = 0.48; // closest two hulls can get
 const LANE = 1.75; // spacing on the start line: blades all but touching
 const GAPS = 2; // open places the rivals leave on the line
 const BEHIND = 14; // how far back from the line you start, metres
+const RACE_PACE = 1.06; // rivals' racing beat, against the beat they could hold for ever
 
 // Division 9, the entry division: a start line of twelve club paddlers in
-// all sorts of boats. Pace is their usual beat as a share of the beat they
-// could hold for ever (below 1 is quicker, and tires them); kick is how far out
+// all sorts of boats. Pace scales their usual beat (below 1 is quicker, and
+// tires them sooner); kick is how far out
 // (real metres) they start sprinting for the line.
 export const DIVISION_9 = [
   { name: 'Ingrid', hull: 'club', power: 1.0, endurance: 1.0, pace: 1.0, kick: 120 },
@@ -74,7 +75,9 @@ export function createRace(course, { rivals = [], seed = 1, you = {} } = {}) {
       spot = { back, lateral: lateral + (rand() - 0.5) * 0.6 };
     }
     const boat = createBoat({ ...place(onLine - spot.back, spot.lateral, heading), ...rival });
-    const cadence = steadyBeat(boat) * rival.pace; // seconds a stroke: about 97 a minute
+    // Seconds a stroke: a touch slower than they could hold for ever (about
+    // 86 a minute), so there's something left for the finish.
+    const cadence = steadyBeat(boat) * rival.pace * RACE_PACE;
     return racer(rival.name, boat, {
       ...rival,
       cadence,
