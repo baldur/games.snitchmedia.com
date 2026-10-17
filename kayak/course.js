@@ -132,7 +132,7 @@ export function practiceRiver() {
 }
 
 // A division race on an English lowland river: `km` on the HUD. A wide reach
-// for the start line, then 14-19 m between the banks, with boats moored along
+// for the start line, then 11-16 m between the banks, with boats moored along
 // the way and a couple of old bridges.
 export function raceRiver(km = 6, warp = 4) {
   const start = 80;
@@ -141,10 +141,10 @@ export function raceRiver(km = 6, warp = 4) {
   for (let i = 0; i * 100 <= finish + 160; i++) {
     points.push([Math.sin(i * 0.7) * 60 + Math.sin(i * 0.29 + 1) * 40, -i * 100]);
   }
-  const reach = (s) => 16.5 + 2 * Math.sin(s * 0.011) + 1.2 * Math.sin(s * 0.029 + 2);
+  const reach = (s) => 13.5 + 1.8 * Math.sin(s * 0.011) + 1 * Math.sin(s * 0.029 + 2);
   const width = (s) => {
     const k = Math.max(0, Math.min(1, (s - start - 50) / 120)); // the start reach narrows down
-    return 30 + (reach(s) - 30) * k * k * (3 - 2 * k);
+    return 25 + (reach(s) - 25) * k * k * (3 - 2 * k);
   };
   const moorings = [];
   for (const [at, side, count] of [[420, 1, 3], [700, -1, 2], [980, 1, 4], [1290, -1, 3]]) {

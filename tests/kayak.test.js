@@ -209,10 +209,10 @@ test('hitting the bank costs speed once, then you slide along it', () => {
 
 test('the race river is a narrow English river, with a wide reach for the start', () => {
   const course = raceRiver();
-  assert.ok(widthAt(course, course.start).half * 2 >= 24, 'room for twelve on the line');
+  assert.ok(widthAt(course, course.start).half * 2 >= 24, 'room for thirteen places on the line');
   for (let s = course.start + 200; s < course.finish; s += 10) {
     const { half } = widthAt(course, s);
-    assert.ok(half * 2 >= 13 && half * 2 <= 20, `width ${half * 2} at ${s}`);
+    assert.ok(half * 2 >= 10.5 && half * 2 <= 17, `width ${half * 2} at ${s}`);
   }
 });
 

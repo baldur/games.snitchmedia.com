@@ -10,7 +10,7 @@ import { locate, pointAt, headingAt, widthAt, roomAhead } from './course.js';
 const BOW = 3.3; // hull ends, metres from the boat's origin (see meshes.kayakMesh)
 const STERN = 1.9;
 const BEAM = 0.48; // closest two hulls can get
-const LANE = 2; // spacing on the start line: blade to blade
+const LANE = 1.75; // spacing on the start line: blades all but touching
 const GAPS = 2; // open places the rivals leave on the line
 const BEHIND = 14; // how far back from the line you start, metres
 
