@@ -8,6 +8,8 @@ In 2010 I started a little collection called **Dom Games**: Snake, Pong, Bricks,
 
 Browsers have changed enormously since. A page can now read gamepads, synthesize sound, vibrate a phone, draw with the GPU, run code off the main thread, talk peer-to-peer and work offline, all without a single library. So in 2026 the project is coming back with the same question, asked again: **what can you build with just the browser?**
 
+The answer turns out to be a wide range. At one end is a Tic Tac Toe with zero JavaScript, and at the other are GPU compute shaders and code compiled to WebAssembly. All of it is just the browser.
+
 The originals are preserved, untouched apart from removing a long-dead analytics snippet, in [`classic/`](classic/). Each game gets rebuilt from scratch with modern web APIs, and the two versions link to each other so you can compare.
 
 ## How it's being made
@@ -28,6 +30,7 @@ The 2026 revival is being built in collaboration with [Claude Code](https://clau
 
 - Only native web platform features. Canvas, WebGPU, Web Audio, Workers and friends are all in.
 - No libraries, no npm, no bundler, no transpiler. ES modules loaded straight from the server.
+- The one exception: **WebAssembly**. A game may compile Rust (or C, or Zig) to `.wasm`, because wasm is a web standard in its own right. Its text format could even be written by hand; the compiler just saves typing. The source sits next to the `.wasm`, and there's no generated glue code: just the browser's own `WebAssembly` API.
 - Sounds are generated in code, not loaded from files.
 - It should work on a phone as well as with a keyboard or gamepad.
 

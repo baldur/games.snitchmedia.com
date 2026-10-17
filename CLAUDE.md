@@ -6,6 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A collection of browser games for games.snitchmedia.com. The rule for the whole site: **only native web platform features. No libraries, no frameworks, no build step, no package.json.** Canvas, WebGPU, Web Audio, Gamepad, Workers, etc. are all fair game; jQuery, npm packages and bundlers are not. Every file is served as-is.
 
+**The one exception is WebAssembly.** A game may compile Rust (or C, Zig, …) to a `.wasm` file, because wasm is itself a web standard whose text format could in principle be written by hand. Conditions:
+- The source lives next to the committed `.wasm`, with a one-line rebuild command documented there (e.g. `cargo build --release --target wasm32-unknown-unknown`).
+- No `wasm-bindgen`, `wasm-pack` or generated JS glue. Export plain functions and load them with `WebAssembly.instantiateStreaming`, plus a few hand-written lines of JS.
+- Only use it where it earns its place (heavy simulation, search, DSP). If plain JS is fast enough, use plain JS.
+
+The collection deliberately covers a range of techniques, from zero-JS CSS (Tic Tac Toe) and DOM (Connect Four) through canvas and WebGPU to wasm. Pick the technique that best shows off what the browser can do for each game.
+
 ## Commands
 
 ```sh
