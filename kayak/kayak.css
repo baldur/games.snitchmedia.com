@@ -115,6 +115,12 @@ header button {
   .rotate-hint { display: block; }
 }
 
+/* Fingers need bigger targets than a mouse. */
+@media (pointer: coarse) {
+  header button, header a { min-height: 40px; display: inline-flex; align-items: center; }
+  header button { padding-inline: 1rem; }
+}
+
 /* A phone on its side: little height, so tuck everything closer to the edges. */
 @media (max-height: 500px) {
   header { padding: 0.35rem 16px; }

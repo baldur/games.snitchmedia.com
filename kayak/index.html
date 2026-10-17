@@ -13,7 +13,7 @@
   <canvas id="view" aria-label="First-person view from the kayak"></canvas>
 
   <header>
-    <a href="../">&larr; Games</a>
+    <a href="../" class="leave">&larr; Games</a>
     <h1>Kayak</h1>
     <button id="pause" type="button">Pause</button>
     <button id="sound" type="button" aria-pressed="true">Sound on</button>
@@ -80,7 +80,7 @@
         <li><kbd>P</kbd> or <kbd>Esc</kbd> to pause, <kbd>M</kbd> to toggle sound</li>
       </ul>
     </details>
-    <p class="dialog-links"><a href="../">&larr; All games</a></p>
+    <p class="dialog-links"><a href="../" class="leave">&larr; All games</a></p>
   </dialog>
 
   <dialog id="paused">
@@ -90,6 +90,7 @@
       <button value="resume" autofocus>Resume</button>
       <button value="restart">Restart</button>
       <button value="menu">Quit to menu</button>
+      <button value="leave">Leave the game</button>
     </form>
   </dialog>
 

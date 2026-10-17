@@ -191,6 +191,25 @@ menu.querySelector('form').addEventListener('click', (e) => {
       .catch(() => {});
   }
 });
+// Leaving: out of full screen, then back to wherever you came from (the game
+// may be hosted where ../ isn't a games list), or else to ../.
+function leave() {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  if (document.referrer && history.length > 1) history.back();
+  else location.href = '../';
+}
+for (const link of document.querySelectorAll('a.leave')) {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    leave();
+  });
+}
+// The phone's back gesture first takes you out of full screen: pause there,
+// so the pause screen's Leave button is one tap away.
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) pause();
+});
+
 // Turned upright mid-race: pause, and the pause screen says to turn it back.
 matchMedia('(orientation: portrait) and (pointer: coarse)').addEventListener('change', (e) => {
   if (e.matches) pause();
@@ -204,7 +223,8 @@ menu.addEventListener('close', () => {
   start();
 });
 paused.addEventListener('close', () => {
-  if (paused.returnValue === 'menu') toMenu();
+  if (paused.returnValue === 'leave') leave();
+  else if (paused.returnValue === 'menu') toMenu();
   else if (paused.returnValue === 'restart') start();
   else state = resumeTo;
 });
