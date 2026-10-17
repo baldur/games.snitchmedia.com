@@ -1,0 +1,77 @@
+/* Shared look for every modern game page. Games add their own stylesheet on top. */
+
+:root {
+  color-scheme: light dark;
+  --bg: #f4f1ea;
+  --ink: #1b1b1b;
+  --dim: #6b6760;
+  --line: #d8d3c8;
+  --accent: #d6452f;
+  --field: #141414;
+  --field-ink: #f4f1ea;
+  --field-dim: #5a5a5a;
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101010;
+    --ink: #ece8df;
+    --dim: #8f8a80;
+    --line: #2c2c2c;
+    --accent: #ff6a4d;
+    --field: #000;
+    --field-ink: #ece8df;
+    --field-dim: #3a3a3a;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; }
+
+body {
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 var(--font);
+  padding: 0 16px;
+}
+
+a { color: inherit; text-underline-offset: 0.2em; }
+a:hover { color: var(--accent); }
+
+button {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4em 0.9em;
+  cursor: pointer;
+}
+button:hover, button:focus-visible { border-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+kbd {
+  font: 0.85em var(--mono);
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 0.35em;
+}
+
+dialog {
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.5rem;
+  width: min(26rem, calc(100vw - 32px));
+}
+dialog::backdrop { background: rgb(0 0 0 / 0.55); }
+dialog h2 { margin: 0 0 1rem; }
+dialog form { display: grid; gap: 0.5rem; }
+dialog form button { padding: 0.7em 1em; text-align: left; }
+dialog small { color: var(--dim); }

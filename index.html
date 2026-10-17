@@ -1,41 +1,35 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-<title>Snitchmedia Games</title>
- <link rel="stylesheet" href="./css/screen.css" type="text/css"  media="screen, projection"> 
-<style type="text/css"> 
-    ul { list-style-type:none; font-size: 2em; line-height: 1.4em } 
-    ul li:hover { list-style-type: square }
-    a { font-weight: bold; color: black; text-decoration: none }
-    a:hover { color: gray; text-decoration: underline }
-</style>
-<script type="text/javascript">
-
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-565491-11']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-
-</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snitchmedia Games</title>
+  <link rel="stylesheet" href="shared/site.css">
+  <style>
+    main { max-width: 40rem; margin: 0 auto; padding: 3rem 0; }
+    h1 { font-size: clamp(2rem, 8vw, 3.5rem); line-height: 1; margin: 0 0 0.5rem; }
+    .lede { color: var(--dim); margin: 0 0 2.5rem; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    .games li { border-top: 1px solid var(--line); }
+    .games a { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 1rem 0; text-decoration: none; }
+    .games strong { font-size: 1.5rem; }
+    .games span { color: var(--dim); font-size: 0.9rem; text-align: right; }
+    .games a:hover strong { color: var(--accent); }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--dim); }
+  </style>
 </head>
-
 <body>
-    <div class="container" >
-        <h1>Dom Games</h1>
-        <ul>
-            <li><a href="connect_four">Connect Four</a></li>
-            <li><a href="snake">Snake</a></li>
-            <li><a href="tic-tac-toe">Tic Tac Toe</a></li>
-            <li><a href="pong">Pong</a></li>
-            <li><a href="bricks">Bricks</a></li>
-        </ul>
-    </div>
-</body>
+  <main>
+    <h1>Snitchmedia Games</h1>
+    <p class="lede">Games made with nothing but the web platform. No libraries, no build step.</p>
 
+    <ul class="games">
+      <li><a href="pong/"><strong>Pong</strong><span>Canvas, Gamepad API, Web Audio, touch</span></a></li>
+    </ul>
+
+    <footer>
+      <a href="classic/">The original 2010 &ldquo;Dom Games&rdquo;</a>: Snake, Pong, Bricks, Connect Four and Tic Tac Toe, built with jQuery and divs.
+    </footer>
+  </main>
+</body>
 </html>
