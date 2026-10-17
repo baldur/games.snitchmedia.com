@@ -1,6 +1,7 @@
 // A pack race: the player plus computer paddlers on the same boat physics.
-// The rivals wait on the start line with a couple of gaps; you paddle up from
-// behind into one. A starter then sounds the horn without warning; rivals then
+// Half the rivals already wait on the start line; the rest are still drifting
+// up to it, a few lengths ahead of you, and everyone leaves a couple of gaps
+// for you to paddle up into. A starter then sounds the horn without warning; rivals then
 // sprint off the line, pace themselves on stamina, hang on each other's wash,
 // avoid and bump into each other and kick for the finish. Pure, no DOM, so
 // whole races run in tests.
@@ -60,9 +61,19 @@ export function createRace(course, { rivals = [], seed = 1, you = {} } = {}) {
   const heading = headingAt(course, onLine);
   const racer = (name, boat, ai) => ({ name, boat, loc: locate(course, boat.x, boat.z), finish: null, draft: 0, ai });
   const player = racer('You', createBoat({ ...place(solo ? onLine : onLine - BEHIND, 0, headingAt(course, onLine - BEHIND)), ...you }), null);
+  // Who is still on the way: they're a few lengths back in their own lane,
+  // in two loose rows, the back row clear of you in the middle.
+  const late = new Set();
+  while (late.size < Math.floor(rivals.length / 2)) late.add(Math.floor(rand() * rivals.length));
+  let row = 0;
   const racers = rivals.map((rival, k) => {
     const lateral = (taken[k] - (slots.length - 1) / 2) * LANE;
-    const boat = createBoat({ ...place(onLine - rand() * 0.6, lateral, heading), ...rival });
+    let spot = { back: rand() * 0.6, lateral };
+    if (late.has(k)) {
+      const back = Math.abs(lateral) > 2 && row++ % 2 ? 9 + rand() * 2 : 3.5 + rand() * 2;
+      spot = { back, lateral: lateral + (rand() - 0.5) * 0.6 };
+    }
+    const boat = createBoat({ ...place(onLine - spot.back, spot.lateral, heading), ...rival });
     const cadence = steadyBeat(boat) * rival.pace; // seconds a stroke: about 97 a minute
     return racer(rival.name, boat, {
       ...rival,
@@ -225,12 +236,13 @@ function think(r, race) {
   const { course, racers } = race;
   const lean = clamp(-(boat.roll * 2 + boat.rollRate * 0.6));
   if (!started(race)) {
-    // On the line: hold position, or creep up level when the line moves.
+    // Drift up to the line with slow, easy strokes, then hold position on it
+    // (creeping up level again when the line moves).
     const behind = race.start.line - 0.4 - bowAt(r);
     const strokes = [];
     if (behind > 0 && boat.time >= ai.creep) {
       strokes.push(boat.lastSide === 'left' ? 'right' : 'left');
-      ai.creep = boat.time + (behind > 1.5 ? 0.7 : 1.2);
+      ai.creep = boat.time + (behind > 1.5 ? 1 + race.rand() * 0.5 : 1.3);
     }
     return { strokes, rudder: steer(r, course, ai.grid, 10), lean };
   }

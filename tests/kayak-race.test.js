@@ -123,7 +123,7 @@ test('the horn comes after "Are you ready?", at an unpredictable moment', () => 
     let t = 0;
     while (!started(race)) {
       assert.ok(t < 60, 'the start never came');
-      for (const e of stepRace(race, DT, lineUp(race)).events) if (e !== 'stroke' && e !== 'weak') calls.push([e, t]);
+      for (const e of stepRace(race, DT, lineUp(race)).events) if (!['stroke', 'weak', 'bump'].includes(e)) calls.push([e, t]);
       t += DT;
     }
     assert.deepEqual(calls.map(([e]) => e), ['line-up', 'ready', 'go']);
@@ -133,21 +133,26 @@ test('the horn comes after "Are you ready?", at an unpredictable moment', () => 
   assert.ok(waits.size > 1);
 });
 
-test('the rivals wait on the line with gaps, and you paddle up into one', () => {
+test('half the field waits on the line, the rest drift up to it, and you paddle into a gap', () => {
   const race = createRace(raceRiver(), { rivals: DIVISION_9, seed: 5 });
   assert.equal(race.gaps.length, 2);
   const line = race.start.line;
-  for (const r of race.racers.filter((r) => r.ai)) {
-    assert.ok(Math.abs(r.loc.s + 3.3 - line) < 1.5, `${r.name} on the line`);
+  const bow = (r) => r.loc.s + 3.3;
+  const rivals = race.racers.filter((r) => r.ai);
+  const waiting = rivals.filter((r) => Math.abs(bow(r) - line) < 1.5);
+  assert.equal(waiting.length, rivals.length - Math.floor(rivals.length / 2));
+  for (const r of rivals) assert.ok(bow(r) > bow(race.player) + 1, `${r.name} is ahead of you`);
+  for (const r of waiting) {
     for (const g of race.gaps) assert.ok(Math.abs(r.loc.lateral - g) > 1, `${r.name} clear of the gap`);
   }
-  assert.ok(race.player.loc.s + 3.3 < line - 10, 'you start behind the line');
+  assert.ok(bow(race.player) < line - 10, 'you start behind the line');
   for (let t = 0; !started(race); t += DT) {
     assert.ok(t < 60, 'the start never came');
     stepRace(race, DT, lineUp(race));
   }
   assert.ok(Math.abs(race.player.loc.lateral - nearestGap(race)) < 0.8, 'in the gap');
-  assert.ok(Math.abs(race.player.loc.s + 3.3 - line) < 2.5, 'level with the others');
+  for (const r of race.racers) assert.ok(Math.abs(bow(r) - line) < 2.5, `${r.name} level on the line`);
+  assert.ok(race.racers.every((r) => r.boat.capsizes === 0));
 });
 
 test('the starter waits for you, and calls you up again', () => {
