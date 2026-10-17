@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createBoat, step, strokeRate, bounceOffBank, BOAT } from '../kayak/sim.js';
+import { createBoat, step, strokeRate, bounceOffBank, BOAT, HULLS } from '../kayak/sim.js';
 import { practiceRiver, locate, pointAt, headingAt } from '../kayak/course.js';
 
 const DT = 1 / 120;
@@ -106,6 +106,42 @@ test('the rudder only bites with speed', () => {
   moving.speed = 5;
   paddle(2, { interval: 0, rudder: 1, lean: balance, boat: moving });
   assert.ok(moving.heading > 0.5);
+});
+
+test('a steady beat builds rhythm, and rhythm is speed', () => {
+  const steady = paddle(15, { lean: balance }).boat;
+  assert.ok(steady.rhythm > 0.95, `rhythm ${steady.rhythm}`);
+  // The same average rhythm, played unevenly.
+  const ragged = createBoat();
+  let t = 0;
+  for (let n = 0; t < 15; n++) {
+    const gap = n % 2 ? 0.27 : 0.43;
+    for (let s = 0; s < gap; s += DT, t += DT) {
+      step(ragged, DT, { strokes: s === 0 ? [n % 2 ? 'left' : 'right'] : [], lean: balance(ragged) });
+    }
+  }
+  assert.ok(ragged.rhythm < 0.3, `ragged rhythm ${ragged.rhythm}`);
+  assert.ok(steady.speed > ragged.speed + 0.4);
+});
+
+test('steering hard breaks your rhythm', () => {
+  const straight = paddle(10, { lean: balance }).boat;
+  const steering = paddle(10, { lean: balance, rudder: 1 }).boat;
+  assert.ok(steering.rhythm < straight.rhythm - 0.3, `${steering.rhythm} vs ${straight.rhythm}`);
+});
+
+test('a narrow racing hull is faster, a wide one steadier', () => {
+  const speed = (hull) => paddle(20, { lean: balance, boat: createBoat({ hull }) }).boat.speed;
+  assert.ok(speed('racing') > speed('club') + 0.1);
+  assert.ok(speed('club') > speed('stable') + 0.1);
+  // Hands off the balance, at a gentle paddle: how long until you fall in?
+  const upright = (hull) => {
+    const boat = createBoat({ hull });
+    const { events } = paddle(60, { interval: 0.45, boat });
+    return events.filter((e) => e === 'capsize').length;
+  };
+  assert.ok(upright('racing') > upright('stable'));
+  assert.ok(HULLS.racing.swimTime > HULLS.stable.swimTime, 'and a swim costs more');
 });
 
 test('stroke rate counts recent strokes per minute', () => {

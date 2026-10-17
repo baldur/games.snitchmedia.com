@@ -1,4 +1,4 @@
-import { BOAT, strokeRate } from './sim.js';
+import { BOAT, HULLS, strokeRate } from './sim.js';
 import { practiceRiver, raceRiver } from './course.js';
 import { createRace, stepRace, standings, DIVISION_9 } from './race.js';
 import { buildWorld } from './world.js';
@@ -13,7 +13,8 @@ const STEP = 1 / 120;
 const EYE_HEIGHT = 0.78;
 const FOV_Y = (62 * Math.PI) / 180;
 const MIN_FOV_X = (75 * Math.PI) / 180;
-const COUNTDOWN = 3;
+const HULL_KEY = 'snitchmedia:kayak:hull';
+const FORM_KEY = 'snitchmedia:kayak:form'; // sessionStorage: this visit only, for now
 
 const MODES = {
   race: { course: raceRiver(6), rivals: DIVISION_9, bestKey: 'snitchmedia:kayak:div9' },
@@ -30,6 +31,10 @@ const LIVERIES = [
   { deck: [0.1, 0.1, 0.12], hull: [0.9, 0.9, 0.88], stripe: [0.9, 0.2, 0.2], top: [0.85, 0.15, 0.15], skin: [0.42, 0.28, 0.2], cap: [0.1, 0.1, 0.1] },
   { deck: [0.2, 0.7, 0.85], hull: [0.95, 0.95, 0.95], stripe: [0.95, 0.95, 0.95], top: [0.95, 0.95, 0.95], skin: [0.9, 0.72, 0.58], cap: [0.2, 0.7, 0.85] },
   { deck: [0.95, 0.45, 0.1], hull: [0.95, 0.93, 0.88], stripe: [0.1, 0.1, 0.1], top: [0.3, 0.3, 0.32], skin: [0.88, 0.68, 0.55], cap: [0.95, 0.45, 0.1] },
+  { deck: [0.85, 0.85, 0.82], hull: [0.92, 0.92, 0.9], stripe: [0.8, 0.1, 0.3], top: [0.8, 0.1, 0.3], skin: [0.7, 0.5, 0.38], cap: [0.85, 0.85, 0.82] },
+  { deck: [0.15, 0.45, 0.2], hull: [0.95, 0.95, 0.95], stripe: [0.95, 0.95, 0.95], top: [0.95, 0.6, 0.1], skin: [0.9, 0.74, 0.62], cap: [0.15, 0.45, 0.2] },
+  { deck: [0.3, 0.3, 0.75], hull: [0.95, 0.93, 0.88], stripe: [0.95, 0.4, 0.1], top: [0.3, 0.3, 0.75], skin: [0.5, 0.34, 0.24], cap: [0.95, 0.4, 0.1] },
+  { deck: [0.98, 0.9, 0.3], hull: [0.95, 0.95, 0.95], stripe: [0.2, 0.5, 0.9], top: [0.2, 0.5, 0.9], skin: [0.86, 0.66, 0.52], cap: [0.98, 0.9, 0.3] },
 ];
 
 const canvas = document.getElementById('view');
@@ -38,42 +43,65 @@ const menu = document.getElementById('menu');
 const paused = document.getElementById('paused');
 const finished = document.getElementById('finished');
 const flash = document.getElementById('flash');
-const els = Object.fromEntries(['clock', 'togo', 'pos', 'wash', 'speed', 'rate', 'stamina', 'needle', 'best', 'result', 'details', 'standings', 'nogpu']
+const els = Object.fromEntries(['clock', 'togo', 'pos', 'wash', 'speed', 'rate', 'stamina', 'rhythm', 'needle', 'best', 'result', 'details', 'standings', 'nogpu']
   .map((id) => [id, document.getElementById(id)]));
 
 const controls = new Controls(canvas);
 
-let state = 'menu'; // 'menu' | 'countdown' | 'racing' | 'paused' | 'finished'
+let state = 'menu'; // 'menu' | 'start' (on the line) | 'racing' | 'paused' | 'finished'
 let resumeTo = 'racing';
 let mode = MODES.race;
 let race;
 let liveries; // racer -> index into LIVERIES and meshes.racers
-let countdown = 0;
+let hull = 'club';
+try { if (HULLS[localStorage.getItem(HULL_KEY)]) hull = localStorage.getItem(HULL_KEY); } catch {}
 let renderer = null;
 let meshes = null;
 
 // --- race flow ---------------------------------------------------------------
 
 function reset() {
-  race = createRace(mode.course, { rivals: mode.rivals, seed: (Math.random() * 2 ** 31) | 0 });
+  const f = form();
+  race = createRace(mode.course, {
+    rivals: mode.rivals,
+    seed: (Math.random() * 2 ** 31) | 0,
+    you: { hull, power: 1 + f, endurance: 1 + f * 1.5 },
+  });
+  // Practice also sharpens your feel for the beat.
+  const h = race.player.boat.hull;
+  race.player.boat.hull = { ...h, rhythmSlop: h.rhythmSlop * (1 + f * 2) };
   let next = 1;
   liveries = new Map(race.racers.map((r) => [r, r === race.player ? 0 : next++]));
-  countdown = COUNTDOWN;
   controls.clear();
 }
 
 function start() {
   reset();
-  state = 'countdown';
+  state = 'start';
   hud.hidden = false;
   hud.classList.toggle('solo', race.racers.length === 1);
 }
 
 function pause() {
-  if (state !== 'racing' && state !== 'countdown') return;
+  if (state !== 'racing' && state !== 'start') return;
   resumeTo = state;
   state = 'paused';
   openDialog(paused);
+}
+
+// Session form: every race paddled makes you a little stronger, fitter and
+// steadier on the beat, up to about 10%. Only for this visit, for now.
+function training() {
+  try { return JSON.parse(sessionStorage.getItem(FORM_KEY)) ?? { km: 0, races: 0 }; } catch { return { km: 0, races: 0 }; }
+}
+function form() {
+  return 0.1 * (1 - Math.exp(-training().km / 6));
+}
+function train(km) {
+  const t = training();
+  t.km += km;
+  t.races++;
+  try { sessionStorage.setItem(FORM_KEY, JSON.stringify(t)); } catch {}
 }
 
 // Race time as shown: stretched by the course's warp (see course.js).
@@ -97,6 +125,10 @@ function finish() {
     try { localStorage.setItem(mode.bestKey, JSON.stringify(best)); } catch {}
   }
 
+  const before = form();
+  train((mode.course.finish - mode.course.start) / 1000);
+  const gained = form() - before;
+
   const caps = race.player.boat.capsizes;
   const capsText = caps ? `${caps} capsize${caps > 1 ? 's' : ''}` : 'no capsizes';
   if (solo) {
@@ -106,6 +138,7 @@ function finish() {
     els.result.textContent = place === 1 ? 'You won!' : `You came ${ordinal(place)}`;
     els.details.textContent = `${formatTime(time)}, ${capsText}. Best ${ordinal(best.place)}, ${formatTime(best.time)}.`;
   }
+  els.details.textContent += ` Form up ${(gained * 100).toFixed(1)}% to +${(form() * 100).toFixed(1)}%.`;
   // Rivals still out on the course get the time they're on track for.
   els.standings.replaceChildren(...table.map((r) => {
     const li = document.createElement('li');
@@ -130,8 +163,19 @@ function toMenu() {
     if (typeof b === 'number') b = { time: b };
     return name === 'race' ? `Division 9 best: ${ordinal(b.place)}, ${formatTime(b.time)}` : `Practice best: ${formatTime(b.time)}`;
   });
+  const t = training();
+  if (t.races) lines.push(`Form this session: +${(form() * 100).toFixed(1)}% after ${t.races} race${t.races > 1 ? 's' : ''}`);
   els.best.textContent = lines.filter(Boolean).join(' · ');
   openDialog(menu);
+}
+
+// The hull picker: radio buttons in the menu, remembered between visits.
+for (const radio of menu.querySelectorAll('input[name="hull"]')) {
+  radio.checked = radio.value === hull;
+  radio.addEventListener('change', () => {
+    hull = radio.value;
+    try { localStorage.setItem(HULL_KEY, hull); } catch {}
+  });
 }
 
 menu.addEventListener('cancel', (e) => e.preventDefault());
@@ -155,7 +199,7 @@ document.getElementById('pause').addEventListener('click', pause);
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 soundToggle(document.getElementById('sound'), { isMuted, setMuted });
 addEventListener('keydown', (e) => {
-  if ((e.code === 'KeyP' || e.code === 'Escape') && (state === 'racing' || state === 'countdown')) {
+  if ((e.code === 'KeyP' || e.code === 'Escape') && (state === 'racing' || state === 'start')) {
     e.preventDefault();
     pause();
   }
@@ -194,11 +238,30 @@ const sounds = {
     noise({ freq: 400, to: 120, q: 0.6, duration: 0.3, gain: 0.15, type: 'lowpass' });
     tone({ freq: 70, duration: 0.12, type: 'sine', gain: 0.1 });
   },
+  // The starter: a horn for the off, a whistle for a jumped start.
+  go: () => {
+    tone({ freq: 233, duration: 0.9, type: 'sawtooth', gain: 0.12 });
+    tone({ freq: 349, duration: 0.9, type: 'sawtooth', gain: 0.08 });
+  },
+  hold: () => {
+    tone({ freq: 2600, to: 2400, duration: 0.25, type: 'sine', gain: 0.12 });
+    setTimeout(() => tone({ freq: 2600, to: 2300, duration: 0.45, type: 'sine', gain: 0.12 }), 300);
+  },
   bump: () => {
     tone({ freq: 180, to: 110, duration: 0.09, type: 'triangle', gain: 0.14 });
     noise({ freq: 900, to: 400, q: 1, duration: 0.15, gain: 0.08 });
   },
 };
+
+// The starter's voice, through the browser's own speech synthesis.
+function say(text) {
+  if (isMuted() || !window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.05;
+  u.pitch = 0.9;
+  speechSynthesis.speak(u);
+}
 
 function react({ events, splashes }) {
   for (const e of events) {
@@ -212,6 +275,20 @@ function react({ events, splashes }) {
     if (e === 'bank') controls.rumble(0.8, 150);
     if (e === 'bump') controls.rumble(0.6, 120);
     if (e === 'finish') finish();
+    if (e === 'line-up') say(race.start.holds ? 'Back to the line' : 'Paddlers, come up to the line');
+    if (e === 'ready') say('Are you ready?');
+    if (e === 'hold') say('Hold it! Hold the line!');
+    if (e === 'line-up') show(race.start.holds ? 'Come back up to the line' : 'Come up to the line', { small: true, hold: 2.5 });
+    if (e === 'ready') show('Are you ready?', { small: true, hold: 1 });
+    if (e === 'go') {
+      state = 'racing';
+      show('Go!', { hold: 0.6 });
+      controls.rumble(0.8, 300);
+    }
+    if (e === 'hold') {
+      show('Hold the line! You jumped the start', { small: true, hold: 3 });
+      controls.rumble(0.5, 200);
+    }
   }
   // The pack around you: nearby blades are louder.
   for (const d of splashes) {
@@ -221,36 +298,22 @@ function react({ events, splashes }) {
 
 // --- simulation --------------------------------------------------------------
 
-let lastCount = COUNTDOWN;
 function simulate(dt) {
   const input = controls.take();
   const boat = race.player.boat;
-  if (state === 'countdown') {
-    countdown -= dt;
-    const count = Math.ceil(countdown);
-    if (count !== lastCount && count > 0) {
-      show(String(count));
-      tone({ freq: 440, duration: 0.15, type: 'square', gain: 0.08 });
-    }
-    lastCount = count;
-    if (countdown <= 0) {
-      state = 'racing';
-      show('Go!');
-      tone({ freq: 880, duration: 0.4, type: 'square', gain: 0.1 });
-    }
-  } else if (state === 'finished') {
+  if (state === 'finished') {
     // Over the line you glide to a stop; nobody should capsize after finishing.
     input.strokes = [];
     input.lean = Math.max(-1, Math.min(1, -(boat.roll * 2 + boat.rollRate * 0.6)));
-  } else if (state !== 'racing') {
+  } else if (state !== 'racing' && state !== 'start') {
     return;
   }
-  react(stepRace(race, dt, input, { started: state !== 'countdown' }));
+  react(stepRace(race, dt, input));
 }
 
 // --- rendering ---------------------------------------------------------------
 
-const frameData = new Float32Array(80);
+const frameData = new Float32Array(112);
 const SUN = normalize([0.35, 0.42, -0.84]);
 
 function boatFrame(b) {
@@ -271,32 +334,85 @@ function boatFrame(b) {
   return { f, up, right, back: f.map((v) => -v), pos: [b.x, 0, b.z] };
 }
 
-// Where the paddle is in boat space. Seen from the cockpit (`firstPerson`) it
-// rests low across the deck, just out of view, and each stroke lifts it into a
-// diagonal: the working blade plants by the bow and pulls back. Rivals hold it
-// higher, in front of the chest, and windmill it through every stroke.
-function paddlePose(b, firstPerson) {
+// Where the player's paddle is in boat space, seen from the cockpit. It rests
+// low across the deck, just out of view, and each stroke lifts it into a
+// diagonal: the working blade plants by the bow and pulls back.
+function paddlePose(b) {
   const t = b.time - b.paddle.at;
   const dir = b.paddle.side === 'left' ? 1 : -1;
-  const rest = firstPerson ? { y: 0.16, z: -0.6 } : { y: 0.5, z: -0.3 };
-  const lift = firstPerson ? 0.24 : 0.1;
-  const reach = firstPerson ? [-1.0, 0.2] : [-0.75, 0.15];
+  const REST = { y: 0.16, z: -0.6 };
   let tilt = 0;
-  let y = rest.y;
-  let z = rest.z;
+  let y = REST.y;
+  let z = REST.z;
   let yaw = 0;
   if (b.paddle.side && t < BOAT.strokeTime) {
     const p = t / BOAT.strokeTime;
     const arc = Math.sin(Math.PI * Math.min(1, p * 1.15));
-    tilt = dir * (firstPerson ? 0.72 : 0.6) * arc;
-    y = rest.y + lift * arc;
-    z = reach[0] + (reach[1] - reach[0]) * p;
+    tilt = dir * 0.72 * arc;
+    y = REST.y + 0.24 * arc;
+    z = -1.0 + 1.2 * p;
     yaw = dir * 0.35 * (1 - 2 * p);
   } else if (b.paddle.side && t < BOAT.strokeTime + 0.25) {
     const e = 1 - (1 - (t - BOAT.strokeTime) / 0.25) ** 2;
-    z = reach[1] + (rest.z - reach[1]) * e;
+    z = 0.2 + (REST.z - 0.2) * e;
   }
-  return { matrix: multiply(translation(0, y, z), multiply(rotationZ(tilt), rotationY(yaw))), yaw };
+  return multiply(translation(0, y, z), multiply(rotationZ(tilt), rotationY(yaw)));
+}
+
+// A rival's paddle through a real stroke, in boat space. The blade is planted
+// by the feet, stays put in the water while the boat runs past it (so in the
+// boat's frame it slides back along the hull, a little outward, like a wing
+// blade), exits by the hip and the paddle rolls over for the other side. The
+// top hand stays high and the torso unwinds through each stroke.
+const PADDLE_HALF = 0.85; // shaft centre to blade centre
+function rivalPaddle(b) {
+  const beat = Math.min(0.7, Math.max(0.25, b.beat ?? 0.4));
+  const t = b.time - b.paddle.at;
+  if (!b.paddle.side || b.swim > 0 || t > beat * 1.6) {
+    return { matrix: frameFrom([0, 0.5, -0.3], [1, 0, 0]), twist: 0 };
+  }
+  const side = b.paddle.side === 'left' ? -1 : 1;
+  const IN_WATER = 0.62;
+  const p = Math.min(1, t / beat);
+  // Pose with the `e`-side blade a fraction q through its pull.
+  const pull = (e, q, dt) => {
+    const dip = Math.sin(Math.PI * q);
+    const blade = [e * (0.55 + 0.15 * q), -0.08 - 0.14 * dip, Math.min(0.3, -1.0 + Math.max(b.speed * dt, q * 0.9))];
+    const centre = [e * 0.1, 0.42 + 0.05 * dip, blade[2] * 0.45 - 0.2];
+    return { axis: normalize(blade.map((v, i) => (v - centre[i]) * e)), blade, e, twist: -e * 0.3 * (1 - 2 * q) };
+  };
+  let pose;
+  if (p < IN_WATER) {
+    pose = pull(side, p / IN_WATER, t);
+  } else {
+    // Out of the water: swing over to the catch on the other side.
+    const from = pull(side, 1, beat * IN_WATER);
+    const to = pull(-side, 0, 0);
+    const k = smooth((p - IN_WATER) / (1 - IN_WATER));
+    const axis = normalize(from.axis.map((v, i) => v + (to.axis[i] - v) * k));
+    const centreFrom = from.blade.map((v, i) => v - from.axis[i] * from.e * PADDLE_HALF);
+    const centreTo = to.blade.map((v, i) => v - to.axis[i] * to.e * PADDLE_HALF);
+    const centre = centreFrom.map((v, i) => v + (centreTo[i] - v) * k);
+    centre[1] += 0.12 * Math.sin(Math.PI * k); // lift the paddle clear as it rolls over
+    return { matrix: frameFrom(centre, axis), twist: from.twist + (to.twist - from.twist) * k };
+  }
+  const centre = pose.blade.map((v, i) => v - pose.axis[i] * pose.e * PADDLE_HALF);
+  return { matrix: frameFrom(centre, pose.axis), twist: pose.twist };
+}
+
+// Paddle matrix: shaft along `axis` (local x), centred on `centre`, blade faces
+// turned towards the stern.
+function frameFrom(centre, axis) {
+  const back = [0, 0, 1];
+  const d = back[0] * axis[0] + back[1] * axis[1] + back[2] * axis[2];
+  const z = normalize(back.map((v, i) => v - d * axis[i]));
+  const y = [z[1] * axis[2] - z[2] * axis[1], z[2] * axis[0] - z[0] * axis[2], z[0] * axis[1] - z[1] * axis[0]];
+  return basis(axis, y, z, centre);
+}
+
+function smooth(x) {
+  const t = Math.max(0, Math.min(1, x));
+  return t * t * (3 - 2 * t);
 }
 
 // An arm from shoulder to hand (both in boat space), as a stretched limbMesh.
@@ -314,16 +430,18 @@ function placeRacers() {
     const fr = boatFrame(r.boat);
     const model = basis(fr.right, fr.up, fr.back, fr.pos);
     const set = meshes.racers[liveries.get(r)];
-    renderer.place(set.kayak, [model]);
-    const pose = paddlePose(r.boat, r === race.player);
-    paddles.push(multiply(model, pose.matrix));
-    if (r === race.player) continue;
+    renderer.place(kayakFor(r), [model]);
+    if (r === race.player) {
+      paddles.push(multiply(model, paddlePose(r.boat)));
+      continue;
+    }
     // The paddler twists with the stroke; hands stay on the shaft.
-    const twist = rotationY(pose.yaw * 0.7);
-    renderer.place(set.body, [multiply(model, multiply(translation(0, 0, SEAT), twist))]);
+    const pose = rivalPaddle(r.boat);
+    paddles.push(multiply(model, pose.matrix));
+    renderer.place(set.body, [multiply(model, multiply(translation(0, 0, SEAT), rotationY(pose.twist)))]);
     const arms = [-1, 1].map((side) => {
-      const c = Math.cos(pose.yaw * 0.7);
-      const s = Math.sin(pose.yaw * 0.7);
+      const c = Math.cos(pose.twist);
+      const s = Math.sin(pose.twist);
       const shoulder = [side * SHOULDER.x * c, SHOULDER.y, SEAT - side * SHOULDER.x * s];
       return limb(model, shoulder, apply(pose.matrix, [side * 0.36, 0, 0]));
     });
@@ -358,14 +476,14 @@ function render(time) {
   frameData.set([0.3, 0.52, 0.84, 0], 36);
   frameData.set([0.78, 0.85, 0.9, 0.0016], 40);
   frameData.set([0.07, 0.2, 0.24, 0], 44);
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 16; i++) {
     const b = race.racers[i]?.boat;
     frameData.set(b && b.swim <= 0 ? [b.x, b.z, b.heading, b.speed] : [0, 0, 0, 0], 48 + i * 4);
   }
   const list = [meshes.worlds.get(mode)];
   for (const r of race.racers) {
     const set = meshes.racers[liveries.get(r)];
-    list.push(set.kayak);
+    list.push(kayakFor(r));
     if (r !== race.player) list.push(set.body, set.arms);
   }
   list.push(meshes.paddle);
@@ -389,6 +507,8 @@ function updateHud(dt) {
   els.speed.textContent = (boat.speed * 3.6).toFixed(1);
   els.rate.textContent = strokeRate(boat);
   els.stamina.style.transform = `scaleX(${boat.stamina.toFixed(3)})`;
+  els.rhythm.style.transform = `scaleX(${boat.rhythm.toFixed(3)})`;
+  els.rhythm.parentElement.classList.toggle('locked', boat.rhythm > 0.9);
   const angle = Math.max(-1.1, Math.min(1.1, boat.roll / BOAT.capsize)) * 90;
   els.needle.style.transform = `rotate(${angle.toFixed(1)}deg)`;
 }
@@ -402,7 +522,7 @@ function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
   handleGamepad(controls.poll(dt));
-  if (state === 'countdown' || state === 'racing' || state === 'finished') {
+  if (state === 'start' || state === 'racing' || state === 'finished') {
     acc += dt;
     while (acc >= STEP) {
       acc -= STEP;
@@ -438,6 +558,16 @@ function normalize(v) {
   return v.map((x) => x / l);
 }
 
+// Each racer's boat in their colours, built the first time that colour and
+// hull width are needed.
+function kayakFor(r) {
+  const livery = liveries.get(r);
+  const { beam } = r.boat.hull;
+  const key = `${livery}:${beam}`;
+  if (!meshes.kayaks.has(key)) meshes.kayaks.set(key, renderer.createMesh(kayakMesh({ ...LIVERIES[livery], beam })));
+  return meshes.kayaks.get(key);
+}
+
 // The scenery is built the first time each course is raced.
 function useWorld() {
   if (meshes.worlds.has(mode)) return;
@@ -466,8 +596,8 @@ try {
   meshes = {
     worlds: new Map(),
     paddle: renderer.createMesh(paddleMesh({ shaft: [0.22, 0.23, 0.26], blade: [1, 0.82, 0.2] }), LIVERIES.length),
+    kayaks: new Map(),
     racers: LIVERIES.map((l, i) => ({
-      kayak: renderer.createMesh(kayakMesh(l)),
       body: i ? renderer.createMesh(paddlerMesh(l)) : null,
       arms: i ? renderer.createMesh(limbMesh(l.top), 2) : null,
     })),

@@ -112,7 +112,8 @@ export class MeshBuilder {
 
 // A marathon K1, about 5.2 m long, in boat space: x right, y up, -z forward.
 // The paddler's eye sits just behind the origin.
-export function kayakMesh({ deck, hull, stripe, cockpit = [0.05, 0.05, 0.06] }) {
+// `beam` scales the width: narrower racing hulls, wider stable ones.
+export function kayakMesh({ deck, hull, stripe, cockpit = [0.05, 0.05, 0.06], beam = 1 }) {
   const m = new MeshBuilder();
   const bow = -3.3;
   const stern = 1.9;
@@ -120,7 +121,7 @@ export function kayakMesh({ deck, hull, stripe, cockpit = [0.05, 0.05, 0.06] }) 
   const ring = (z) => {
     const t = (z - bow) / (stern - bow); // 0 at the bow, 1 at the stern
     const shape = Math.sin(Math.PI * Math.min(1, t * 1.15)) ** 0.75;
-    const w = 0.235 * shape;
+    const w = 0.235 * beam * shape;
     const top = 0.05 + 0.1 * shape;
     return [
       [-w, 0.02, z], [-w * 0.55, top * 0.9, z], [0, top, z], [w * 0.55, top * 0.9, z],

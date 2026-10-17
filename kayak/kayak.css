@@ -73,8 +73,10 @@ header button {
 #balance circle { fill: #fff; }
 #needle { transform-origin: 100px 100px; }
 
-.stamina { justify-self: end; display: grid; gap: 0.35rem; font-size: 0.8rem; width: clamp(100px, 20vw, 180px); }
-.stamina .bar { height: 10px; border-radius: 5px; background: rgb(0 0 0 / 0.35); overflow: hidden; }
+.meters { justify-self: end; display: grid; gap: 0.35rem; font-size: 0.8rem; width: clamp(100px, 20vw, 180px); }
+.meters .bar { height: 10px; border-radius: 5px; background: rgb(0 0 0 / 0.35); overflow: hidden; }
+#rhythm { height: 100%; width: 100%; background: linear-gradient(90deg, #4aa3ff, #b48cff); transform-origin: left; }
+.bar.rhythm.locked { box-shadow: 0 0 10px #b48cff; }
 #stamina { height: 100%; width: 100%; background: linear-gradient(90deg, #ff5a3c, #ffd23f 40%, #6fdc8c); transform-origin: left; }
 
 #hud.solo #pos { display: none; }
@@ -115,6 +117,10 @@ header button {
 #flash.small { font-size: clamp(1.1rem, 4vw, 1.8rem); }
 
 body.capsized #view { filter: saturate(0.5) brightness(0.8) hue-rotate(-15deg); }
+
+fieldset.hulls { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; display: grid; gap: 0.35rem; }
+fieldset.hulls legend { color: var(--dim); font-size: 0.85rem; padding: 0 0.25rem; }
+fieldset.hulls label { display: flex; align-items: baseline; gap: 0.5rem; cursor: pointer; }
 
 dialog .lede { color: var(--dim); margin-top: -0.5rem; }
 dialog .warning { color: var(--accent); }

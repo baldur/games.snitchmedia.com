@@ -6,12 +6,12 @@ export function openDialog(dialog) {
 }
 
 // Lets a gamepad drive whichever of `dialogs` is open: d-pad moves focus between
-// its form buttons, A or Start presses. Returns false if no dialog is open, so the
+// its form buttons (and inputs, e.g. radios), A or Start presses. Returns false if no dialog is open, so the
 // caller can treat the buttons as game input instead.
 export function gamepadDialogs(dialogs, pressed) {
   const dialog = dialogs.find((d) => d.open);
   if (!dialog) return false;
-  const buttons = [...dialog.querySelectorAll('form button')];
+  const buttons = [...dialog.querySelectorAll('form button, form input')];
   if (!buttons.length) return true;
   const i = buttons.indexOf(document.activeElement);
   if (pressed.has(BUTTON.DOWN)) buttons[(i + 1) % buttons.length].focus();

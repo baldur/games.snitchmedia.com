@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBoat, step } from '../kayak/sim.js';
 import { raceRiver, pointAt, locate } from '../kayak/course.js';
-import { createRace, stepRace, standings, wash, DIVISION_9 } from '../kayak/race.js';
+import { createRace, stepRace, standings, started, wash, DIVISION_9 } from '../kayak/race.js';
 
 const DT = 1 / 120;
 const balance = (b) => Math.max(-1, Math.min(1, -(b.roll * 2 + b.rollRate * 0.6)));
@@ -54,7 +54,7 @@ test('touching hulls are pushed apart and count as one bump', () => {
   b.z = a.z + Math.sin(a.heading) * 0.3;
   b.heading = a.heading;
   const bumps = [];
-  for (let i = 0; i < 30; i++) bumps.push(...stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) }, { started: false }).events);
+  for (let i = 0; i < 30; i++) bumps.push(...stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) }).events);
   assert.equal(bumps.filter((e) => e === 'bump').length, 1);
   assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= 0.47);
 });
@@ -62,8 +62,8 @@ test('touching hulls are pushed apart and count as one bump', () => {
 test('a pack of rivals races a full 6 km without capsizing, finishing in about 28 minutes', () => {
   const course = raceRiver();
   const race = createRace(course, { rivals: DIVISION_9, seed: 3 });
-  for (let t = 0; t < 3; t += DT) stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) }, { started: false });
   // The player sits still behind the line, out of the way.
+  while (!started(race)) stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) });
   while (race.time < 600 && race.racers.some((r) => r.ai && r.finish === null)) {
     stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) });
   }
@@ -71,7 +71,7 @@ test('a pack of rivals races a full 6 km without capsizing, finishing in about 2
   assert.ok(rivals.every((r) => r.finish !== null), 'everyone finished');
   const minutes = rivals.map((r) => (r.finish * course.warp) / 60);
   assert.ok(minutes[0] > 25 && minutes[0] < 29, `winner ${minutes[0]}`);
-  assert.ok(minutes.at(-1) < 34, `last ${minutes.at(-1)}`);
+  assert.ok(minutes.at(-1) < 35, `last ${minutes.at(-1)}`);
   assert.ok(rivals.every((r) => r.boat.capsizes === 0));
   assert.equal(standings(race).at(-1), race.player, 'a player who never paddles comes last');
 });
@@ -90,4 +90,35 @@ test('standings put finishers first, then whoever is furthest along', () => {
   place(c, 300);
   c.finish = 100;
   assert.deepEqual(standings(race), [c, b, a]);
+});
+
+test('the horn comes after "Are you ready?", at an unpredictable moment', () => {
+  const waits = new Set();
+  for (const seed of [1, 2, 3]) {
+    const race = createRace(raceRiver(), { rivals: DIVISION_9, seed });
+    const calls = [];
+    let t = 0;
+    while (!started(race)) {
+      for (const e of stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) }).events) calls.push([e, t]);
+      t += DT;
+    }
+    assert.deepEqual(calls.map(([e]) => e), ['line-up', 'ready', 'go']);
+    waits.add((calls[2][1] - calls[1][1]).toFixed(1));
+    assert.ok(race.time <= DT, 'the race clock starts at the horn');
+  }
+  assert.ok(waits.size > 1);
+});
+
+test('jumping the start holds it until the field comes up level, then starts again', () => {
+  const race = createRace(raceRiver(), { rivals: DIVISION_9, seed: 4 });
+  const calls = [];
+  let side = 'left';
+  for (let t = 0, next = 1; !started(race) && t < 60; t += DT) {
+    const strokes = [];
+    if (t > 1 && t < 3 && t >= next) { strokes.push(side); side = side === 'left' ? 'right' : 'left'; next = t + 0.35; }
+    calls.push(...stepRace(race, DT, { strokes, lean: balance(race.player.boat) }).events.filter((e) => e !== 'stroke' && e !== 'weak'));
+  }
+  assert.deepEqual(calls, ['line-up', 'ready', 'hold', 'line-up', 'ready', 'go']);
+  assert.ok(race.start.line > race.course.start, 'the line moved up to the jumper');
+  for (const r of race.racers) assert.ok(Math.abs(r.loc.s + 3.3 - race.start.line) < 1.5, `${r.name} is level`);
 });

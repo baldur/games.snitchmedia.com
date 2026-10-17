@@ -1,6 +1,8 @@
 // A pack race: the player plus computer paddlers on the same boat physics.
-// Rivals pace themselves on stamina, hang on each other's wash, avoid and bump
-// into each other and kick for the line. Pure, no DOM, so races run in tests.
+// A starter lines everyone up and sounds the horn without warning; rivals then
+// sprint off the line, pace themselves on stamina, hang on each other's wash,
+// avoid and bump into each other and kick for the finish. Pure, no DOM, so
+// whole races run in tests.
 import { createBoat, step, bounceOffBank, wrap, BOAT } from './sim.js';
 import { locate, pointAt, headingAt } from './course.js';
 
@@ -9,25 +11,38 @@ const STERN = 1.9;
 const BEAM = 0.48; // closest two hulls can get
 const LANE = 3.2; // spacing on the start line
 
-// Division 9: club paddlers, a little uneven. Cadence is seconds per stroke;
-// kick is how far out (real metres) they start sprinting for the line.
+// Division 9, the entry division: a start line of twelve club paddlers in
+// all sorts of boats. Cadence is seconds per stroke; kick is how far out
+// (real metres) they start sprinting for the line.
 export const DIVISION_9 = [
-  { name: 'Ingrid', power: 1.0, endurance: 1.0, cadence: 0.35, kick: 120 },
-  { name: 'Tomás', power: 0.98, endurance: 1.1, cadence: 0.36, kick: 200 },
-  { name: 'Aoife', power: 0.96, endurance: 1.05, cadence: 0.35, kick: 90 },
-  { name: 'Kenji', power: 1.02, endurance: 0.85, cadence: 0.34, kick: 150 },
-  { name: 'Maja', power: 0.95, endurance: 1.0, cadence: 0.37, kick: 110 },
-  { name: 'Olu', power: 0.97, endurance: 0.95, cadence: 0.36, kick: 250 },
-  { name: 'Bjarki', power: 0.93, endurance: 1.1, cadence: 0.38, kick: 80 },
+  { name: 'Ingrid', hull: 'club', power: 1.0, endurance: 1.0, cadence: 0.35, kick: 120 },
+  { name: 'Tomás', hull: 'club', power: 0.98, endurance: 1.1, cadence: 0.36, kick: 200 },
+  { name: 'Aoife', hull: 'racing', power: 0.95, endurance: 1.0, cadence: 0.35, kick: 90 },
+  { name: 'Kenji', hull: 'club', power: 1.02, endurance: 0.85, cadence: 0.34, kick: 150 },
+  { name: 'Maja', hull: 'stable', power: 0.98, endurance: 1.05, cadence: 0.36, kick: 110 },
+  { name: 'Olu', hull: 'club', power: 0.97, endurance: 0.95, cadence: 0.36, kick: 250 },
+  { name: 'Bjarki', hull: 'stable', power: 0.96, endurance: 1.1, cadence: 0.37, kick: 80 },
+  { name: 'Priya', hull: 'club', power: 0.96, endurance: 1.0, cadence: 0.37, kick: 140 },
+  { name: 'Lukas', hull: 'stable', power: 1.0, endurance: 0.9, cadence: 0.35, kick: 180 },
+  { name: 'Freya', hull: 'club', power: 0.94, endurance: 1.05, cadence: 0.38, kick: 100 },
+  { name: 'Mateo', hull: 'racing', power: 0.96, endurance: 0.9, cadence: 0.36, kick: 160 },
 ];
 
-export function createRace(course, { rivals = [], seed = 1 } = {}) {
+// The starter: boats come up to the line; "Are you ready?"; then the horn
+// after a pause you can't predict. Cross the line early and the start is
+// held while everyone else comes up level with you, then it begins again.
+const LINE_UP = 3; // seconds before the ready call
+const READY = [1.2, 4.5]; // shortest and longest wait for the horn after it
+const JUMP = 1; // metres over the line that count as jumping the start
+
+// you: the player's { power, endurance, hull }.
+export function createRace(course, { rivals = [], seed = 1, you = {} } = {}) {
   const rand = mulberry32(seed);
   const n = rivals.length + 1;
   const slot = Math.floor((n - 1) / 2); // the player starts just left of centre
   const order = [...rivals.keys()];
   order.splice(slot, 0, -1);
-  const s = course.start - BOW - 2;
+  const s = course.start - BOW - 0.3;
   const p = pointAt(course, s);
   const heading = headingAt(course, s);
   const racers = order.map((who, k) => {
@@ -35,7 +50,7 @@ export function createRace(course, { rivals = [], seed = 1 } = {}) {
     const x = p.x - p.tz * lateral;
     const z = p.z + p.tx * lateral;
     const rival = rivals[who];
-    const boat = createBoat({ x, z, heading, power: rival?.power, endurance: rival?.endurance });
+    const boat = createBoat({ x, z, heading, ...(rival ?? you) });
     return {
       name: rival?.name ?? 'You',
       boat,
@@ -45,31 +60,70 @@ export function createRace(course, { rivals = [], seed = 1 } = {}) {
       ai: rival ? {
         ...rival,
         interval: rival.cadence,
-        next: rand() * 0.3,
+        next: 0.15 + rand() * 0.35, // reaction to the horn
+        creep: 0,
         side: rand() < 0.5 ? -1 : 1, // which hip of a leader to hang on
         lane: lateral * 0.7,
+        grid: lateral, // where they sat on the start line
       } : null,
     };
   });
-  return { course, racers, player: racers[slot], time: 0, rand, contacts: new Set() };
+  return {
+    course, racers, player: racers[slot], time: 0, rand, contacts: new Set(),
+    start: { phase: 'line-up', timer: LINE_UP, line: course.start, holds: 0, calls: ['line-up'] },
+  };
 }
 
-// One fixed step. `input` drives the player. Before the gun (`started` false)
-// nobody can paddle. Returns { events, splashes }: the player's events
-// ('stroke', 'weak', 'capsize', 'remount', 'bank', 'bump', 'finish'), and how
-// far away each rival stroke was, for the sound of the pack.
-export function stepRace(race, dt, input, { started = true } = {}) {
+export const started = (race) => race.start.phase === 'go';
+
+// Bow position along the course.
+const bowAt = (r) => r.loc.s + BOW;
+
+// Runs the starter. Calls ('line-up', 'ready', 'go', 'hold') go to race.start.calls.
+function starter(race, dt) {
+  const st = race.start;
+  if (st.phase === 'go') return;
+  st.timer -= dt;
+  const bow = bowAt(race.player);
+  if (st.phase !== 'hold' && bow > st.line + JUMP) {
+    // Jumped the start: hold everything, and move the line up to the jumper.
+    Object.assign(st, { phase: 'hold', timer: 3, holds: st.holds + 1 });
+    st.calls.push('hold');
+  }
+  if (st.phase === 'hold') {
+    st.line = Math.max(st.line, bow);
+    const level = race.racers.every((r) => bowAt(r) > st.line - 1.5);
+    if (st.timer <= 0 && level && race.player.boat.speed < 0.3) {
+      Object.assign(st, { phase: 'line-up', timer: LINE_UP });
+      st.calls.push('line-up');
+    }
+  } else if (st.timer <= 0 && st.phase === 'line-up') {
+    Object.assign(st, { phase: 'ready', timer: READY[0] + race.rand() * (READY[1] - READY[0]) });
+    st.calls.push('ready');
+  } else if (st.timer <= 0 && st.phase === 'ready') {
+    st.phase = 'go';
+    st.calls.push('go');
+  }
+}
+
+// One fixed step. `input` drives the player. Returns { events, splashes }:
+// the player's events ('stroke', 'weak', 'capsize', 'remount', 'bank', 'bump',
+// 'finish') and the starter's calls ('line-up', 'ready', 'go', 'hold'), and
+// how far away each rival stroke was, for the sound of the pack.
+export function stepRace(race, dt, input) {
   const { course, racers, player } = race;
-  if (started) race.time += dt;
+  starter(race, dt);
+  const going = started(race);
+  if (going) race.time += dt;
   const splashes = [];
   let events = [];
 
   const washes = racers.map((r) => totalWash(r, racers));
   racers.forEach((r, i) => {
-    const intent = r.ai ? think(r, race, started) : { ...input };
-    if (!started) intent.strokes = [];
+    const intent = r.ai ? think(r, race) : { ...input };
     r.draft = washes[i].draft;
     const result = step(r.boat, dt, { ...intent, draft: r.draft, rock: washes[i].rock });
+    if (!going) r.boat.speed *= Math.exp(-0.6 * dt); // holding water on the line
     r.loc = locate(course, r.boat.x, r.boat.z, r.loc.i);
     if (bounceOffBank(r.boat, r.loc, course.width / 2)) result.push('bank');
     if (r === player) events = result;
@@ -83,11 +137,12 @@ export function stepRace(race, dt, input, { started = true } = {}) {
   }
 
   for (const r of racers) {
-    if (started && r.finish === null && r.loc.s >= course.finish) {
+    if (going && r.finish === null && r.loc.s >= course.finish) {
       r.finish = race.time;
       if (r === player) events.push('finish');
     }
   }
+  events.push(...race.start.calls.splice(0));
   return { events, splashes };
 }
 
@@ -145,11 +200,20 @@ export function cruiseSpeed(interval, power = 1) {
   return (-0.02 + Math.sqrt(0.02 ** 2 + 4 * 0.067 * push)) / (2 * 0.067);
 }
 
-function think(r, race, started) {
+function think(r, race) {
   const { boat, ai, loc } = r;
   const { course, racers } = race;
   const lean = clamp(-(boat.roll * 2 + boat.rollRate * 0.6));
-  if (!started) return { strokes: [], rudder: 0, lean };
+  if (!started(race)) {
+    // On the line: hold position, or creep up level when the line moves.
+    const behind = race.start.line - 0.4 - bowAt(r);
+    const strokes = [];
+    if (behind > 0 && boat.time >= ai.creep) {
+      strokes.push(boat.lastSide === 'left' ? 'right' : 'left');
+      ai.creep = boat.time + (behind > 1.5 ? 0.4 : 0.8);
+    }
+    return { strokes, rudder: steer(r, course, ai.grid, 10), lean };
+  }
 
   const togo = course.finish - loc.s;
   // The rhythm they could keep up forever: anything quicker spends stamina.
@@ -158,6 +222,7 @@ function think(r, race, started) {
   let cadence = ai.cadence;
   if (r.finish !== null) cadence = race.time - r.finish < 8 ? 0.6 : 0; // paddle off, then drift
   else if (togo < ai.kick && boat.stamina > 0.12) cadence *= 0.78;
+  else if (loc.s < race.start.line + 150) cadence *= 0.88; // sprint off the line for a place on a wash
   else if (tired) cadence = Math.max(cadence, steady * (1.05 + (0.35 - boat.stamina)));
 
   // Find the wash to sit on: the nearest boat just ahead, if it isn't too slow.
@@ -197,11 +262,16 @@ function think(r, race, started) {
     ai.next = race.time + ai.interval * (1 + (race.rand() - 0.5) * 0.05);
   }
 
-  const aim = pointAt(course, loc.s + 18);
+  return { strokes, rudder: steer(r, course, lateral, 18), lean };
+}
+
+// Rudder towards a point `ahead` metres down the river, `lateral` off the middle.
+function steer({ boat, loc }, course, lateral, ahead) {
+  const aim = pointAt(course, loc.s + ahead);
   const ax = aim.x - aim.tz * lateral;
   const az = aim.z + aim.tx * lateral;
   const err = wrap(Math.atan2(ax - boat.x, -(az - boat.z)) - boat.heading);
-  return { strokes, rudder: clamp(err * 3 - boat.yawRate * 0.5), lean };
+  return clamp(err * 3 - boat.yawRate * 0.5);
 }
 
 // Hulls as line segments from stern to bow. Overlapping boats are pushed
@@ -239,6 +309,7 @@ function collide(race, i, j) {
     const side = Math.sign((n[0] * Math.cos(boat.heading) + n[1] * Math.sin(boat.heading)) * dir);
     if (fresh) {
       boat.speed *= 0.9;
+      boat.rhythm = Math.max(0, boat.rhythm - 0.3);
       boat.rollRate += side * 0.5; // shoved sideways, the hull rolls away from the hit
     } else {
       boat.speed *= 0.9995;

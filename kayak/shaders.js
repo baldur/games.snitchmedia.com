@@ -11,7 +11,7 @@ struct Frame {
   skyTop: vec4f,
   skyHorizon: vec4f, // also the fog colour; w = fog density
   water: vec4f,      // deep water colour
-  boats: array<vec4f, 8>, // x, z, heading, speed: for their wakes
+  boats: array<vec4f, 16>, // x, z, heading, speed: for their wakes
 };
 @group(0) @binding(0) var<uniform> frame: Frame;
 
@@ -124,7 +124,7 @@ fn ripple(p: vec2f, t: f32) -> vec2f {
 // behind the stern. x is height, y is how much foam.
 fn wake(p: vec2f) -> vec2f {
   var out = vec2f(0.0);
-  for (var i = 0u; i < 8u; i++) {
+  for (var i = 0u; i < 16u; i++) {
     let b = frame.boats[i];
     if (b.w < 0.2) { continue; }
     let f = vec2f(sin(b.z), -cos(b.z));

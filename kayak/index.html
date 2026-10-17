@@ -37,7 +37,9 @@
         <path class="danger" d="M 161.4 48.6 A 80 80 0 0 1 180 100" />
         <g id="needle"><line x1="100" y1="100" x2="100" y2="30" /><circle cx="100" cy="100" r="6" /></g>
       </svg>
-      <div class="stamina">
+      <div class="meters">
+        <span>Rhythm</span>
+        <div class="bar rhythm"><div id="rhythm"></div></div>
         <span>Stamina</span>
         <div class="bar"><div id="stamina"></div></div>
       </div>
@@ -49,7 +51,13 @@
     <h2>Kayak</h2>
     <p class="lede">A first-person marathon kayak race. Find a rhythm, keep your balance, and sit on someone's wash to save your strength for the sprint.</p>
     <form method="dialog">
-      <button value="race" autofocus>Division 9 race <small>6 km, 8 paddlers</small></button>
+      <fieldset class="hulls">
+        <legend>Your boat</legend>
+        <label><input type="radio" name="hull" value="stable"> Stable <small>forgiving, slower</small></label>
+        <label><input type="radio" name="hull" value="club"> Club racer <small>in between</small></label>
+        <label><input type="radio" name="hull" value="racing"> Racing <small>fast and tippy; needs a quick, steady beat</small></label>
+      </fieldset>
+      <button value="race" autofocus>Division 9 race <small>6 km, 12 paddlers</small></button>
       <button value="practice">Practice time trial <small>1 km, on your own</small></button>
     </form>
     <p id="best"></p>
@@ -57,7 +65,8 @@
     <details>
       <summary>Controls</summary>
       <ul>
-        <li><kbd>&larr;</kbd> <kbd>&rarr;</kbd> paddle strokes. Alternate them, and find a rhythm: hammering too fast catches less water, and two on one side is a weak steering stroke</li>
+        <li><kbd>&larr;</kbd> <kbd>&rarr;</kbd> paddle strokes. Alternate them on a steady beat: rhythm is speed. Uneven strokes, two on one side, steering hard and bumping into people all knock you off it</li>
+        <li>The start: come up to the line and wait for the horn. It comes without warning after "Are you ready?" Go early and everyone waits while the line comes up to you</li>
         <li><kbd>A</kbd> <kbd>D</kbd> lean to keep your balance. Standing still is wobbly; speed steadies you</li>
         <li><kbd>Q</kbd> <kbd>E</kbd> rudder. It only bites when you're moving</li>
         <li>Tuck in right behind a boat, or alongside its back half, to ride its wash: the same effort goes further, but the boat rocks more</li>
