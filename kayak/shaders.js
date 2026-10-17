@@ -11,6 +11,7 @@ struct Frame {
   skyTop: vec4f,
   skyHorizon: vec4f, // also the fog colour; w = fog density
   water: vec4f,      // deep water colour
+  boats: array<vec4f, 8>, // x, z, heading, speed: for their wakes
 };
 @group(0) @binding(0) var<uniform> frame: Frame;
 
@@ -118,12 +119,45 @@ fn ripple(p: vec2f, t: f32) -> vec2f {
   return (a + b) * 0.03 + c * 0.014;
 }
 
+// Every boat's wake, which moves with the boat: two arms of diverging waves
+// spreading back from the bow at about 20 degrees, and a narrow churned trail
+// behind the stern. x is height, y is how much foam.
+fn wake(p: vec2f) -> vec2f {
+  var out = vec2f(0.0);
+  for (var i = 0u; i < 8u; i++) {
+    let b = frame.boats[i];
+    if (b.w < 0.2) { continue; }
+    let f = vec2f(sin(b.z), -cos(b.z));
+    let d = p - b.xy;
+    let back = 3.3 - dot(d, f); // metres behind the bow
+    if (back < -0.6 || back > 45.0) { continue; }
+    let lat = abs(d.x * -f.y + d.y * f.x);
+    let strength = min(b.w / 4.0, 1.0);
+    let arm = lat - 0.22 - back * 0.36;
+    let width = 0.35 + back * 0.05;
+    let env = exp(-arm * arm / (width * width)) * exp(-back / 16.0) * smoothstep(-0.6, 0.4, back);
+    out.x += strength * 0.022 * env * cos(back * 2.8 - lat * 1.6);
+    out.y += strength * env * exp(-back / 2.5) * 0.6;
+    let behind = back - 5.2;
+    if (behind > 0.0) {
+      let trail = exp(-lat * lat / (0.15 + behind * 0.04)) * exp(-behind / 10.0);
+      out.x += strength * 0.012 * trail * sin(behind * 3.7 + lat * 5.0);
+      out.y += strength * trail * 0.25;
+    }
+  }
+  return out;
+}
+
+fn surface(p: vec2f, t: f32) -> f32 {
+  return height(p, t) + wake(p).x;
+}
+
 @fragment fn fs(in: Out) -> @location(0) vec4f {
   let t = frame.camPos.w;
   let p = in.world.xz;
   let e = 0.05;
-  let dx = (height(p + vec2f(e, 0.0), t) - height(p - vec2f(e, 0.0), t)) / (2.0 * e);
-  let dz = (height(p + vec2f(0.0, e), t) - height(p - vec2f(0.0, e), t)) / (2.0 * e);
+  let dx = (surface(p + vec2f(e, 0.0), t) - surface(p - vec2f(e, 0.0), t)) / (2.0 * e);
+  let dz = (surface(p + vec2f(0.0, e), t) - surface(p - vec2f(0.0, e), t)) / (2.0 * e);
   let r = ripple(p, t);
   let n = normalize(vec3f(-dx - r.x, 1.0, -dz - r.y));
 
@@ -136,6 +170,8 @@ fn ripple(p: vec2f, t: f32) -> vec2f {
   var c = mix(frame.water.rgb, sky, clamp(fresnel * 1.15, 0.0, 1.0));
   // Sun glitter: a tight highlight that the ripples break up into sparkles.
   c += vec3f(1.0, 0.9, 0.7) * pow(max(dot(refl, frame.sunDir.xyz), 0.0), 1200.0) * 2.0;
+  let foam = clamp(wake(p).y, 0.0, 1.0) * (0.6 + 0.4 * sin(dot(p, vec2f(13.0, 9.0)) + t * 6.0));
+  c = mix(c, vec3f(0.85, 0.9, 0.9), foam * 0.45);
   return vec4f(fog(c, dist), 1.0);
 }
 `;

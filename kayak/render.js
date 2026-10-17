@@ -4,7 +4,7 @@ import { SKY, MESH, WATER } from './shaders.js';
 import { waterGrid } from './meshes.js';
 
 const SAMPLES = 4; // MSAA
-const FRAME_BYTES = 16 * 4 + 8 * 16;
+const FRAME_BYTES = 16 * 4 + 16 * 16;
 
 export async function createRenderer(canvas) {
   if (!navigator.gpu) throw new Error('WebGPU is not available in this browser.');

@@ -77,6 +77,26 @@ header button {
 .stamina .bar { height: 10px; border-radius: 5px; background: rgb(0 0 0 / 0.35); overflow: hidden; }
 #stamina { height: 100%; width: 100%; background: linear-gradient(90deg, #ff5a3c, #ffd23f 40%, #6fdc8c); transform-origin: left; }
 
+#hud.solo #pos { display: none; }
+
+#wash {
+  position: absolute;
+  top: 6.4rem;
+  left: 50%;
+  translate: -50% 0;
+  margin: 0;
+  padding: 0.2rem 0.7rem;
+  border-radius: 1rem;
+  background: rgb(0 0 0 / 0.3);
+  font-size: 0.85rem;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+#wash.on { opacity: 1; }
+
+#standings { columns: 2; column-gap: 2rem; padding-left: 1.5rem; font-family: var(--mono); font-size: 0.9rem; }
+#standings .you { font-weight: 700; color: var(--accent); }
+
 #flash {
   position: absolute;
   top: 38%;

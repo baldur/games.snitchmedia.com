@@ -22,8 +22,10 @@
   <div id="hud" hidden>
     <div class="hud-top">
       <span id="clock">0:00.0</span>
-      <span id="togo">1000 m</span>
+      <span id="togo">6.00 km</span>
+      <span id="pos">1st / 8</span>
     </div>
+    <p id="wash">On the wash</p>
     <div class="hud-bottom">
       <div class="readout">
         <span><b id="speed">0.0</b> km/h</span>
@@ -45,9 +47,10 @@
 
   <dialog id="menu">
     <h2>Kayak</h2>
-    <p class="lede">A first-person marathon kayak. This is the practice river: a 1 km time trial while the racing gets built.</p>
+    <p class="lede">A first-person marathon kayak race. Find a rhythm, keep your balance, and sit on someone's wash to save your strength for the sprint.</p>
     <form method="dialog">
-      <button value="practice" autofocus>Practice time trial <small>1 km</small></button>
+      <button value="race" autofocus>Division 9 race <small>6 km, 8 paddlers</small></button>
+      <button value="practice">Practice time trial <small>1 km, on your own</small></button>
     </form>
     <p id="best"></p>
     <p id="nogpu" class="warning" hidden></p>
@@ -57,6 +60,8 @@
         <li><kbd>&larr;</kbd> <kbd>&rarr;</kbd> paddle strokes. Alternate them, and find a rhythm: hammering too fast catches less water, and two on one side is a weak steering stroke</li>
         <li><kbd>A</kbd> <kbd>D</kbd> lean to keep your balance. Standing still is wobbly; speed steadies you</li>
         <li><kbd>Q</kbd> <kbd>E</kbd> rudder. It only bites when you're moving</li>
+        <li>Tuck in right behind a boat, or alongside its back half, to ride its wash: the same effort goes further, but the boat rocks more</li>
+        <li>Race distances and times are shown four times longer than you actually paddle, so a 6 km race takes about 7 minutes</li>
         <li>Gamepad: <kbd>LT</kbd> <kbd>RT</kbd> strokes, left stick rudder, right stick lean</li>
         <li>Touch: tap the left or right half of the screen to stroke</li>
         <li><kbd>P</kbd> or <kbd>Esc</kbd> to pause, <kbd>M</kbd> to toggle sound</li>
@@ -77,6 +82,7 @@
   <dialog id="finished">
     <h2 id="result"></h2>
     <p id="details"></p>
+    <ol id="standings"></ol>
     <form method="dialog">
       <button value="again" autofocus>Go again</button>
       <button value="menu">Menu</button>

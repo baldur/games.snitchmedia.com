@@ -67,6 +67,23 @@ export class MeshBuilder {
     }
   }
 
+  // Six-sided solid between a bottom and a top quad (each listed going round),
+  // e.g. a torso that tapers from hips to shoulders.
+  prism(bottom, top, color) {
+    const centre = [...bottom, ...top].reduce((a, p) => a.map((v, i) => v + p[i] / 8), [0, 0, 0]);
+    const face = (a, b, c, d) => {
+      const out = sub([0, 1, 2].map((i) => (a[i] + b[i] + c[i] + d[i]) / 4), centre);
+      this.triFacing(a, b, c, color, out);
+      this.triFacing(a, c, d, color, out);
+    };
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) % 4;
+      face(bottom[i], bottom[j], top[j], top[i]);
+    }
+    face(...top);
+    face(...bottom);
+  }
+
   // Low-poly ball (buoys).
   sphere([x, y, z], radius, color, rings = 5, segments = 8) {
     const point = (r, s) => {
@@ -164,6 +181,30 @@ export function paddleMesh({ shaft, blade }) {
       m.triFacing(a, c, d, blade, [0, 0, -1]);
     }
   }
+  return m.build();
+}
+
+// A rival paddler from the hips up, in boat space, sitting at the cockpit:
+// torso in their club top, head and cap. Arms are separate (see limbMesh).
+export const SEAT = 0.15; // z of the paddler's hips
+export const SHOULDER = { x: 0.2, y: 0.58 };
+export function paddlerMesh({ top, skin, cap }) {
+  const m = new MeshBuilder();
+  const ring = (y, w, d) => [[-w, y, -d], [w, y, -d], [w, y, d], [-w, y, d]];
+  m.prism(ring(0.08, 0.16, 0.11), ring(0.38, 0.17, 0.12), top);
+  m.prism(ring(0.38, 0.17, 0.12), ring(SHOULDER.y + 0.02, 0.22, 0.1), top);
+  m.cylinder([0, SHOULDER.y, 0], 0.05, 0.12, 6, skin);
+  m.sphere([0, 0.77, -0.01], 0.105, skin, 5, 8);
+  m.sphere([0, 0.81, 0.0], 0.1, cap, 3, 8);
+  m.box([-0.08, 0.79, -0.15], [0.08, 0.805, -0.07], cap); // peak
+  return m.build();
+}
+
+// A unit-length arm along +z, 1 unit across; a model matrix stretches it
+// from shoulder to hand.
+export function limbMesh(color) {
+  const m = new MeshBuilder();
+  m.box([-0.5, -0.5, 0], [0.5, 0.5, 1], color);
   return m.build();
 }
 

@@ -5,7 +5,9 @@
 const SPACING = 2; // metres between samples
 
 // points: [[x, z], ...] in paddling order. start/finish are distances along the river.
-export function createCourse(points, { width = 34, start = 60, finish = 1060 } = {}) {
+// warp: race distances and times are shown this many times longer than they
+// really are, so a 6 km marathon fits in a few minutes of play (see README).
+export function createCourse(points, { width = 34, start = 60, finish = 1060, warp = 1 } = {}) {
   const raw = [];
   for (let i = 0; i < points.length - 1; i++) {
     const p0 = points[Math.max(i - 1, 0)];
@@ -40,7 +42,7 @@ export function createCourse(points, { width = 34, start = 60, finish = 1060 } =
     p.tz = (b.z - a.z) / len;
   });
 
-  return { samples, width, start, finish, length: (samples.length - 1) * SPACING };
+  return { samples, width, start, finish, warp, length: (samples.length - 1) * SPACING };
 }
 
 // Nearest point on the centreline. `hint` (a previous result's index) limits the
@@ -92,6 +94,17 @@ export function practiceRiver() {
     points.push([Math.sin(i * 1.1) * 50 + Math.sin(i * 0.37) * 25, -i * 100]);
   }
   return createCourse(points, { width: 34, start: 60, finish: 1060 });
+}
+
+// A division race: `km` on the HUD, through wider, longer bends for a pack.
+export function raceRiver(km = 6, warp = 4) {
+  const start = 80;
+  const finish = start + (km * 1000) / warp;
+  const points = [];
+  for (let i = 0; i * 100 <= finish + 160; i++) {
+    points.push([Math.sin(i * 0.7) * 70 + Math.sin(i * 0.29 + 1) * 45, -i * 100]);
+  }
+  return createCourse(points, { width: 48, start, finish, warp });
 }
 
 function catmullRom(p0, p1, p2, p3, t) {

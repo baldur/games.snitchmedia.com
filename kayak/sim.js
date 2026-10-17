@@ -13,9 +13,10 @@ export const BOAT = {
   linearDrag: 0.02,
   strokeTime: 0.32, // how long the blade is in the water
 
-  // Stamina: drains with every stroke, recovers all the time.
+  // Stamina: drains with every stroke, recovers all the time. They balance at
+  // about one stroke every 0.33 s: faster than that eats into your reserve.
   cost: 0.012,
-  recover: 0.03,
+  recover: 0.036,
 
   // Steering: the rudder needs speed to bite; strokes nudge the bow.
   rudder: 0.16, // target yaw rate per m/s of speed
@@ -36,13 +37,19 @@ export const BOAT = {
   turnRoll: 0.35, // turning throws you to the outside
   strokeRoll: 0.25,
   chop: 0.7, // background wobble from the water
+  washRock: 1.6, // extra rocking while riding another boat's wash
   capsize: 0.8,
   swimTime: 3.5,
+
+  // Riding another boat's wash: less drag for the same effort.
+  draft: 0.3, // drag saved at the sweet spot
 };
 
-export function createBoat({ x = 0, z = 0, heading = 0 } = {}) {
+// power scales every stroke and endurance scales stamina recovery, so rivals
+// can be fitter or weaker than you on the same boat.
+export function createBoat({ x = 0, z = 0, heading = 0, power = 1, endurance = 1 } = {}) {
   return {
-    x, z, heading,
+    x, z, heading, power, endurance,
     speed: 0,
     yawRate: 0,
     roll: 0,
@@ -59,7 +66,8 @@ export function createBoat({ x = 0, z = 0, heading = 0 } = {}) {
   };
 }
 
-// input: { strokes: ['left' | 'right', ...], rudder: -1..1, lean: -1..1 }
+// input: { strokes: ['left' | 'right', ...], rudder: -1..1, lean: -1..1,
+//          draft: 0..1, rock: 0..1 } (draft and rock come from race.js's wash())
 // Returns the events that happened, for sound and the HUD:
 // 'stroke' | 'weak' | 'capsize' | 'remount'.
 export function step(boat, dt, input) {
@@ -79,8 +87,9 @@ export function step(boat, dt, input) {
 
   for (const side of input.strokes ?? []) events.push(stroke(boat, side));
 
-  boat.stamina = Math.min(1, boat.stamina + BOAT.recover * dt);
-  boat.speed = Math.max(0, boat.speed - (BOAT.drag * boat.speed ** 2 + BOAT.linearDrag * boat.speed) * dt);
+  boat.stamina = Math.min(1, boat.stamina + BOAT.recover * boat.endurance * dt);
+  const drag = 1 - BOAT.draft * (input.draft ?? 0);
+  boat.speed = Math.max(0, boat.speed - drag * (BOAT.drag * boat.speed ** 2 + BOAT.linearDrag * boat.speed) * dt);
 
   const bite = Math.min(boat.speed, BOAT.rudderMaxSpeed);
   const target = (input.rudder ?? 0) * BOAT.rudder * bite;
@@ -94,7 +103,8 @@ export function step(boat, dt, input) {
     - (BOAT.rollDamp + (braced ? BOAT.brace : 0)) * boat.rollRate
     + BOAT.lean * (input.lean ?? 0)
     - BOAT.turnRoll * boat.yawRate * boat.speed
-    + BOAT.chop * chop(boat.time);
+    + BOAT.chop * chop(boat.time)
+    + BOAT.washRock * (input.rock ?? 0) * slap(boat.time);
   boat.rollRate += accel * dt;
   boat.roll += boat.rollRate * dt;
 
@@ -118,7 +128,7 @@ function stroke(boat, side) {
   quality *= 0.5 + 0.5 * Math.sqrt(boat.stamina);
 
   const dir = side === 'left' ? 1 : -1; // a left stroke turns the bow right
-  boat.speed += BOAT.impulse * quality;
+  boat.speed += BOAT.impulse * boat.power * quality;
   boat.yawRate += dir * BOAT.strokeYaw * (repeat ? 2.5 : 1) * Math.max(quality, 0.3);
   boat.rollRate += -dir * BOAT.strokeRoll * (repeat ? 2 : 1);
   boat.stamina = Math.max(0, boat.stamina - BOAT.cost * Math.min(1, gap / BOAT.minInterval));
@@ -151,6 +161,11 @@ export function strokeRate(boat) {
 // A deterministic, irregular wobble so the water never feels perfectly still.
 function chop(t) {
   return Math.sin(1.7 * t) * Math.sin(0.37 * t + 1) + 0.5 * Math.sin(2.9 * t + 2) * Math.sin(0.23 * t);
+}
+
+// The quicker slap of wash waves against the hull.
+function slap(t) {
+  return Math.sin(5.3 * t) * (0.6 + 0.4 * Math.sin(0.9 * t + 1)) + 0.4 * Math.sin(8.1 * t + 0.5);
 }
 
 // Keeps the boat inside the river. `loc` comes from course.locate(). Hitting the
