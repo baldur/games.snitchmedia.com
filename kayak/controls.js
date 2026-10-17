@@ -1,9 +1,10 @@
 // Keyboard, gamepad, touch and tilt → paddle strokes, rudder and lean.
 // Strokes are discrete events; rudder and lean are held amounts in -1..1.
 //
-// On a phone held sideways, turning it like a steering wheel shifts your
-// weight (lean), from the motion sensors: keep the horizon level. Each touch strokes on its side of
-// the screen, and sliding a finger that's down sideways works the rudder.
+// On a phone held sideways, the phone is your body: turning it like a
+// steering wheel shifts your weight that way (lean), from the motion sensors.
+// Each touch strokes on its side of the screen, and sliding a finger that's
+// down sideways works the rudder.
 // The phone's angle comes from the fused orientation sensor where there is
 // one (steady, and blind to the jolt of each tap), else from the raw
 // accelerometer. Without either (no permission, or a page not served over
@@ -161,10 +162,9 @@ export class Controls {
     const d = Math.atan2(Math.sin(turn - t.zero), Math.cos(turn - t.zero));
     this.debug.turn = turn;
     this.debug.zero = t.zero;
-    // The view rolls with the boat, so the natural move is to turn the phone
-    // to keep the horizon level in your hands: turning it clockwise against a
-    // roll to the right shifts your weight left.
-    const target = clamp(-Math.sign(d) * Math.max(0, Math.abs(d) - TILT_DEAD) / TILT_FULL);
+    // As in the boat: when it dips to the right, lean away from it by turning
+    // the phone anticlockwise. Clockwise shifts your weight right.
+    const target = clamp(Math.sign(d) * Math.max(0, Math.abs(d) - TILT_DEAD) / TILT_FULL);
     t.lean += (target - t.lean) * 0.5; // sensors are noisy: smooth a little
     t.at = performance.now();
   }
