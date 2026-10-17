@@ -75,3 +75,16 @@ dialog h2 { margin: 0 0 1rem; }
 dialog form { display: grid; gap: 0.5rem; }
 dialog form button { padding: 0.7em 1em; text-align: left; }
 dialog small { color: var(--dim); }
+
+/* Way out of a modal menu: while it's open the page header can't be clicked. */
+.dialog-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+.dialog-links a { color: var(--dim); text-decoration: none; }
+.dialog-links a:hover { color: var(--accent); }
