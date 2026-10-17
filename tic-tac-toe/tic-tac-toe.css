@@ -1,4 +1,308 @@
-#board {width: 400px; height: 400px}
-#board div { border: 1px solid white; background: #ccc; width: 32%; height: 32%; float: left}
-#board div.red0 {background: red}
-#board div.blue1 {background: blue}
+/* Tic Tac Toe in pure CSS. See the comment in index.html for how the state machine
+   works: every square has one checkbox per move number, and :has() decides which
+   ones are visible, which marks are drawn and who has won. */
+
+@property --draw {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
+@property --sweep {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 360deg;
+}
+
+main {
+  width: min(100%, 30rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 2rem;
+}
+
+.game {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.note {
+  color: var(--dim);
+  font-size: 0.9rem;
+  margin: 1rem 0 0;
+}
+.note + .note { margin-top: 0.5rem; }
+
+.x { --mark: var(--field-ink); }
+.o { --mark: var(--accent); }
+.status b { font-weight: 800; }
+.status b.x { color: var(--ink); }
+.status b.o { color: var(--accent); }
+
+.status {
+  font-size: 1.35rem;
+  color: var(--ink);
+  margin: 0.25rem 0 0;
+  text-align: center;
+
+  /* Every message is hidden until a rule below picks one. */
+  > span { display: none; }
+}
+
+/* The board ---------------------------------------------------------------- */
+
+.board {
+  /* Fits the width and the height left under the header and status line. */
+  width: min(100%, calc(100dvh - 15rem));
+  min-width: min(100%, 16rem);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  gap: 1.5cqi;
+  padding: 1.5cqi;
+  background: var(--field-dim);
+  border-radius: 8px;
+  container-type: inline-size;
+}
+
+.cell {
+  position: relative;
+  background: var(--field);
+  border-radius: 4px;
+  transition: background-color 0.3s;
+
+  /* The nine move checkboxes are stacked on top of each other and fill the
+     square. At most one of them is ever displayed. */
+  input {
+    display: none;
+    appearance: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+  }
+  input:focus-visible { outline: 3px solid var(--accent); outline-offset: -6px; }
+}
+
+/* Turn tracking: reveal move N in every empty square while move N-1 has been
+   played and move N hasn't. Odd moves are X, even moves are O. */
+
+.game:not(:has(:checked)) {
+  .m1 { display: block; }
+  .turn-x { display: inline; }
+}
+.game:has(.m1:checked):not(:has(.m2:checked)) {
+  .cell:not(:has(:checked)) .m2 { display: block; }
+  .turn-o { display: inline; }
+}
+.game:has(.m2:checked):not(:has(.m3:checked)) {
+  .cell:not(:has(:checked)) .m3 { display: block; }
+  .turn-x { display: inline; }
+}
+.game:has(.m3:checked):not(:has(.m4:checked)) {
+  .cell:not(:has(:checked)) .m4 { display: block; }
+  .turn-o { display: inline; }
+}
+.game:has(.m4:checked):not(:has(.m5:checked)) {
+  .cell:not(:has(:checked)) .m5 { display: block; }
+  .turn-x { display: inline; }
+}
+.game:has(.m5:checked):not(:has(.m6:checked)) {
+  .cell:not(:has(:checked)) .m6 { display: block; }
+  .turn-o { display: inline; }
+}
+.game:has(.m6:checked):not(:has(.m7:checked)) {
+  .cell:not(:has(:checked)) .m7 { display: block; }
+  .turn-x { display: inline; }
+}
+.game:has(.m7:checked):not(:has(.m8:checked)) {
+  .cell:not(:has(:checked)) .m8 { display: block; }
+  .turn-o { display: inline; }
+}
+.game:has(.m8:checked):not(:has(.m9:checked)) {
+  .cell:not(:has(:checked)) .m9 { display: block; }
+  .turn-x { display: inline; }
+}
+
+/* All nine moves played. If somebody won on the last move, the win rules below
+   override this. */
+.game:has(.m9:checked) .draw { display: inline; }
+
+/* Marks --------------------------------------------------------------------- */
+
+.mark {
+  position: absolute;
+  inset: 22%;
+  pointer-events: none;
+  color: var(--mark);
+  --stroke: 3.5cqi;
+
+  &::before, &::after {
+    content: none;
+    position: absolute;
+  }
+}
+
+/* An X is two bars that "draw" in by scaling along their length. */
+.cell:is(:has(.x:checked), :has(.x:hover), :has(.x:focus-visible)) .mark {
+  --mark: var(--field-ink);
+
+  &::before, &::after {
+    content: "";
+    left: -12%;
+    top: calc(50% - var(--stroke) / 2);
+    width: 124%;
+    height: var(--stroke);
+    border-radius: var(--stroke);
+    background: currentColor;
+    transform-origin: center;
+    scale: var(--draw) 1;
+  }
+  &::before { rotate: 45deg; }
+  &::after { rotate: -45deg; }
+}
+
+/* An O is a ring revealed by a sweeping conic-gradient mask. */
+.cell:is(:has(.o:checked), :has(.o:hover), :has(.o:focus-visible)) .mark {
+  --mark: var(--accent);
+
+  &::before {
+    content: "";
+    inset: 0;
+    border: var(--stroke) solid currentColor;
+    border-radius: 50%;
+    mask: conic-gradient(#000 var(--sweep), #0000 0);
+  }
+}
+
+/* Alternative text, so assistive tech reads the board. */
+.cell:has(.x:checked) .mark::before { content: "" / "X"; }
+.cell:has(.o:checked) .mark::before { content: "" / "O"; }
+
+/* Hovering or focusing an empty square previews the current player's mark. */
+.cell:not(:has(:checked)) .mark { opacity: 0.3; }
+
+.cell:has(.x:checked) .mark::before { animation: draw 0.18s ease-out both; }
+.cell:has(.x:checked) .mark::after { animation: draw 0.18s 0.14s ease-out both; }
+.cell:has(.o:checked) .mark::before { animation: sweep 0.35s ease-out both; }
+
+@keyframes draw { from { --draw: 0; } }
+@keyframes sweep { from { --sweep: 0deg; } }
+
+/* Winning ------------------------------------------------------------------- */
+
+/* X has three in a row on any of the 8 lines. */
+.game:is(
+  :has(.c1 .x:checked):has(.c2 .x:checked):has(.c3 .x:checked),
+  :has(.c4 .x:checked):has(.c5 .x:checked):has(.c6 .x:checked),
+  :has(.c7 .x:checked):has(.c8 .x:checked):has(.c9 .x:checked),
+  :has(.c1 .x:checked):has(.c4 .x:checked):has(.c7 .x:checked),
+  :has(.c2 .x:checked):has(.c5 .x:checked):has(.c8 .x:checked),
+  :has(.c3 .x:checked):has(.c6 .x:checked):has(.c9 .x:checked),
+  :has(.c1 .x:checked):has(.c5 .x:checked):has(.c9 .x:checked),
+  :has(.c3 .x:checked):has(.c5 .x:checked):has(.c7 .x:checked)
+) {
+  .status .win-x { display: inline; }
+}
+
+/* O has three in a row on any of the 8 lines. */
+.game:is(
+  :has(.c1 .o:checked):has(.c2 .o:checked):has(.c3 .o:checked),
+  :has(.c4 .o:checked):has(.c5 .o:checked):has(.c6 .o:checked),
+  :has(.c7 .o:checked):has(.c8 .o:checked):has(.c9 .o:checked),
+  :has(.c1 .o:checked):has(.c4 .o:checked):has(.c7 .o:checked),
+  :has(.c2 .o:checked):has(.c5 .o:checked):has(.c8 .o:checked),
+  :has(.c3 .o:checked):has(.c6 .o:checked):has(.c9 .o:checked),
+  :has(.c1 .o:checked):has(.c5 .o:checked):has(.c9 .o:checked),
+  :has(.c3 .o:checked):has(.c5 .o:checked):has(.c7 .o:checked)
+) {
+  .status .win-o { display: inline; }
+}
+
+/* Either player won, so the game is over. (CSS has no way to name a selector
+   list and reuse it, so both lists appear again.) */
+.game:is(
+  :has(.c1 .x:checked):has(.c2 .x:checked):has(.c3 .x:checked),
+  :has(.c4 .x:checked):has(.c5 .x:checked):has(.c6 .x:checked),
+  :has(.c7 .x:checked):has(.c8 .x:checked):has(.c9 .x:checked),
+  :has(.c1 .x:checked):has(.c4 .x:checked):has(.c7 .x:checked),
+  :has(.c2 .x:checked):has(.c5 .x:checked):has(.c8 .x:checked),
+  :has(.c3 .x:checked):has(.c6 .x:checked):has(.c9 .x:checked),
+  :has(.c1 .x:checked):has(.c5 .x:checked):has(.c9 .x:checked),
+  :has(.c3 .x:checked):has(.c5 .x:checked):has(.c7 .x:checked),
+  :has(.c1 .o:checked):has(.c2 .o:checked):has(.c3 .o:checked),
+  :has(.c4 .o:checked):has(.c5 .o:checked):has(.c6 .o:checked),
+  :has(.c7 .o:checked):has(.c8 .o:checked):has(.c9 .o:checked),
+  :has(.c1 .o:checked):has(.c4 .o:checked):has(.c7 .o:checked),
+  :has(.c2 .o:checked):has(.c5 .o:checked):has(.c8 .o:checked),
+  :has(.c3 .o:checked):has(.c6 .o:checked):has(.c9 .o:checked),
+  :has(.c1 .o:checked):has(.c5 .o:checked):has(.c9 .o:checked),
+  :has(.c3 .o:checked):has(.c5 .o:checked):has(.c7 .o:checked)
+) {
+  /* No more moves, and no turn or draw message. */
+  .cell input { display: none; }
+  .status :is(.turn-x, .turn-o, .draw) { display: none; }
+  /* Fade the marks that aren't part of the winning line. */
+  .cell .mark { opacity: 0.35; }
+}
+
+/* Light up the three squares of the winning line, one selector per line. */
+/* Rows */
+.game:is(
+  :has(.c1 .x:checked):has(.c2 .x:checked):has(.c3 .x:checked),
+  :has(.c1 .o:checked):has(.c2 .o:checked):has(.c3 .o:checked)
+) :is(.c1, .c2, .c3),
+.game:is(
+  :has(.c4 .x:checked):has(.c5 .x:checked):has(.c6 .x:checked),
+  :has(.c4 .o:checked):has(.c5 .o:checked):has(.c6 .o:checked)
+) :is(.c4, .c5, .c6),
+.game:is(
+  :has(.c7 .x:checked):has(.c8 .x:checked):has(.c9 .x:checked),
+  :has(.c7 .o:checked):has(.c8 .o:checked):has(.c9 .o:checked)
+) :is(.c7, .c8, .c9),
+/* Columns */
+.game:is(
+  :has(.c1 .x:checked):has(.c4 .x:checked):has(.c7 .x:checked),
+  :has(.c1 .o:checked):has(.c4 .o:checked):has(.c7 .o:checked)
+) :is(.c1, .c4, .c7),
+.game:is(
+  :has(.c2 .x:checked):has(.c5 .x:checked):has(.c8 .x:checked),
+  :has(.c2 .o:checked):has(.c5 .o:checked):has(.c8 .o:checked)
+) :is(.c2, .c5, .c8),
+.game:is(
+  :has(.c3 .x:checked):has(.c6 .x:checked):has(.c9 .x:checked),
+  :has(.c3 .o:checked):has(.c6 .o:checked):has(.c9 .o:checked)
+) :is(.c3, .c6, .c9),
+/* Diagonals */
+.game:is(
+  :has(.c1 .x:checked):has(.c5 .x:checked):has(.c9 .x:checked),
+  :has(.c1 .o:checked):has(.c5 .o:checked):has(.c9 .o:checked)
+) :is(.c1, .c5, .c9),
+.game:is(
+  :has(.c3 .x:checked):has(.c5 .x:checked):has(.c7 .x:checked),
+  :has(.c3 .o:checked):has(.c5 .o:checked):has(.c7 .o:checked)
+) :is(.c3, .c5, .c7) {
+  background: color-mix(in oklab, var(--accent) 45%, var(--field));
+
+  .mark {
+    opacity: 1;
+    animation: pulse 0.5s 0.35s ease-in-out 2;
+  }
+}
+
+@keyframes pulse { 50% { scale: 1.15; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cell, .mark, .mark::before, .mark::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

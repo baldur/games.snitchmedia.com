@@ -1,31 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-<title>Snitchmedia Games - SNAKE</title>
-<link rel="stylesheet" href="snake.css" type="text/css" /> 
-<script type="text/javascript">
-
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-565491-11']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-
-</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snake</title>
+  <link rel="icon" href="../favicon.svg">
+  <link rel="stylesheet" href="../shared/site.css">
+  <link rel="stylesheet" href="../shared/game.css">
+  <style>
+    #field { --aspect: 1.5; } /* 24 x 16 cells */
+    #menu::backdrop { background: rgb(0 0 0 / 0.3); } /* let the demo snake show through */
+  </style>
+  <script type="module" src="main.js"></script>
 </head>
+<body>
+  <header>
+    <a href="../">&larr; Games</a>
+    <h1>Snake</h1>
+    <a href="../classic/snake/">2010 version</a>
+    <button id="pause" type="button" aria-label="Pause">Pause</button>
+    <button id="sound" type="button" aria-pressed="true">Sound on</button>
+  </header>
 
-<body id="games" class="playing">
-  <div id="score">0</div>
-  <div id="cage">
-      <div id="snake"></div>
-  </div>
-  <script type="text/javascript" src="../js/base/jquery-1.4.4.js"></script>
-  <script type="text/javascript" src="snake.js"></script>
+  <canvas id="field" aria-label="Snake playing field"></canvas>
+  <p id="status" class="status" aria-live="polite"></p>
+
+  <dialog id="menu">
+    <h2>Snake</h2>
+    <form method="dialog">
+      <button value="play" autofocus>Play <small>keys, swipe or gamepad</small></button>
+      <button value="tilt" id="tilt">Play with tilt steering <small>tip the phone to turn</small></button>
+    </form>
+    <p id="best"></p>
+    <details>
+      <summary>Controls</summary>
+      <ul>
+        <li>Arrow keys or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></li>
+        <li>Touch or mouse: swipe on the field</li>
+        <li>Gamepad: d-pad or left stick, <kbd>Start</kbd> to pause</li>
+        <li>Tilt: hold the phone comfortably when the game starts, then tip it the way you want to go</li>
+        <li><kbd>P</kbd> or <kbd>Esc</kbd> to pause, <kbd>M</kbd> to toggle sound</li>
+      </ul>
+      <p>Eat the food to grow. Every bite makes you a little faster. Don't hit the walls or yourself.</p>
+    </details>
+    <p class="dialog-links"><a href="../">&larr; All games</a><a href="../classic/snake/">Play the 2010 version</a></p>
+  </dialog>
+
+  <dialog id="paused">
+    <h2>Paused</h2>
+    <form method="dialog">
+      <button value="resume" autofocus>Resume</button>
+      <button value="menu">Quit to menu</button>
+    </form>
+  </dialog>
+
+  <dialog id="over">
+    <h2 id="result"></h2>
+    <p id="result-detail"></p>
+    <form method="dialog">
+      <button value="again" autofocus>Play again</button>
+      <button value="menu">Menu</button>
+    </form>
+  </dialog>
 </body>
-
 </html>

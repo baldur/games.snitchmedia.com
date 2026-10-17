@@ -1,32 +1,81 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Bricks</title>
-
-<script src="../js/base/jquery-1.4.4.js" type="text/javascript" charset="utf-8"></script>
-<script src="bricks.js" type="text/javascript" charset="utf-8"></script>
-<link rel="stylesheet" href="bricks.css" type="text/css" media="screen" charset="utf-8">
-<script type="text/javascript">
-
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-565491-11']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-
-</script>
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bricks</title>
+  <link rel="icon" href="../favicon.svg">
+  <link rel="stylesheet" href="../shared/site.css">
+  <link rel="stylesheet" href="../shared/game.css">
+  <style>
+    /* The particle canvas sits exactly on top of the field and lets pointer input through. */
+    .stage { position: relative; width: 100%; display: flex; justify-content: center; align-items: flex-start; }
+    #field { --aspect: 4 / 3; }
+    #fx {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      translate: -50% 0;
+      height: 100%;
+      aspect-ratio: 4 / 3;
+      pointer-events: none;
+      border-radius: 6px;
+    }
+    #fx[hidden] { display: none; }
+  </style>
+  <script type="module" src="main.js"></script>
 </head>
+<body>
+  <header>
+    <a href="../">&larr; Games</a>
+    <h1>Bricks</h1>
+    <a href="../classic/bricks/">2010 version</a>
+    <button id="pause" type="button" aria-label="Pause">Pause</button>
+    <button id="sound" type="button" aria-pressed="true">Sound on</button>
+  </header>
 
-<body id="index" class="home">
-    <div id="field">
-        <div id="ball"></div>
-        <div id="paddle" class="paddle"></div>
-    </div>
+  <div class="stage">
+    <canvas id="field" aria-label="Bricks playing field"></canvas>
+    <canvas id="fx" aria-hidden="true"></canvas>
+  </div>
+  <p id="status" class="status" aria-live="polite"></p>
+
+  <dialog id="menu">
+    <h2>Bricks</h2>
+    <form method="dialog">
+      <button value="play" autofocus>Play <small>3 lives, 4 walls, then round again faster</small></button>
+    </form>
+    <p><small class="best"></small></p>
+    <details>
+      <summary>Controls</summary>
+      <ul>
+        <li>Paddle: <kbd>&larr;</kbd> / <kbd>&rarr;</kbd> or <kbd>A</kbd> / <kbd>D</kbd></li>
+        <li>Touch or mouse: drag or move over the field</li>
+        <li>Gamepad: left stick or d-pad, <kbd>A</kbd> to launch, <kbd>Start</kbd> to pause</li>
+        <li><kbd>Space</kbd> or tap to launch the ball</li>
+        <li><kbd>P</kbd> or <kbd>Esc</kbd> to pause, <kbd>M</kbd> to toggle sound</li>
+      </ul>
+      <p>Where the ball meets the paddle sets its angle. Outlined bricks take more than one hit.</p>
+    </details>
+    <p class="dialog-links"><a href="../">&larr; All games</a><a href="../classic/bricks/">Play the 2010 version</a></p>
+  </dialog>
+
+  <dialog id="paused">
+    <h2>Paused</h2>
+    <form method="dialog">
+      <button value="resume" autofocus>Resume</button>
+      <button value="menu">Quit to menu</button>
+    </form>
+  </dialog>
+
+  <dialog id="over">
+    <h2>Game over</h2>
+    <p id="result"></p>
+    <form method="dialog">
+      <button value="again" autofocus>Play again</button>
+      <button value="menu">Menu</button>
+    </form>
+    <p><small class="best"></small></p>
+  </dialog>
 </body>
 </html>

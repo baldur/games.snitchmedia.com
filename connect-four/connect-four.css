@@ -1,0 +1,120 @@
+/* Connect Four board, built from DOM elements rather than a canvas: each column is
+   a button holding its discs, and a masked overlay on top punches the holes, so
+   discs fall behind the board face. */
+
+:root {
+  --board: #2459c9;
+  --board-edge: #1a449e;
+  --hole: #e7e2d6;
+  --red: #d6452f;
+  --yellow: #f2b632;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --board: #1d4bb0;
+    --board-edge: #12337d;
+    --hole: #0b0b0b;
+    --red: #ff5a3d;
+    --yellow: #ffc83d;
+  }
+}
+
+header { flex-wrap: wrap; }
+
+.players {
+  display: flex;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+.player {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem 0.25rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--dim);
+  transition: border-color 0.2s, color 0.2s;
+}
+.player small { color: var(--dim); }
+.player.active, .player.won { color: var(--ink); border-color: var(--ink); }
+.player.won small::after { content: " wins"; }
+.player.thinking small::after { content: "\2026"; animation: blink 1s steps(2) infinite; }
+.chip { width: 1rem; height: 1rem; border-radius: 50%; }
+
+.board {
+  --rows: 6;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  /* Fits both the viewport width and the height left around it. */
+  width: min(100%, 36rem, calc((100dvh - 10.5rem) * 7 / 6));
+  padding: 2.5%;
+  background: var(--board);
+  border-radius: 4% / 4.6%;
+  box-shadow: inset 0 -0.35rem 0 var(--board-edge), 0 0.6rem 1.5rem rgb(0 0 0 / 0.25);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.col {
+  position: relative;
+  z-index: 0;
+  display: grid;
+  grid-template-rows: repeat(var(--rows), 1fr);
+  aspect-ratio: 1 / 6;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--hole);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+/* The board face: board colour everywhere except a round hole per cell. */
+.col::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: var(--board);
+  mask: radial-gradient(circle closest-side, transparent 80%, #000 calc(80% + 1px)) 0 0 / 100% calc(100% / var(--rows)) repeat-y;
+  pointer-events: none;
+}
+.col.selected { background: color-mix(in srgb, var(--hole), var(--ink) 12%); }
+.col:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
+
+.disc {
+  grid-column: 1;
+  place-self: center;
+  position: relative;
+  z-index: 1;
+  width: 84%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--c), #fff 35%), var(--c) 45%, color-mix(in srgb, var(--c), #000 22%));
+  box-shadow: inset 0 0 0 0.3rem color-mix(in srgb, var(--c), #000 12%);
+}
+.p1 { --c: var(--red); }
+.p2 { --c: var(--yellow); }
+.chip.p1, .chip.p2 { background: var(--c); }
+.ghost { opacity: 0.35; }
+
+/* Game over: dim every disc except the winning line, which pulses. */
+.board.over .disc:not(.win) { filter: saturate(0.35) brightness(0.75); }
+.disc.win {
+  box-shadow: inset 0 0 0 0.3rem #fff;
+  animation: pulse 0.7s ease-in-out infinite alternate;
+}
+
+/* Lighter than usual, so the winning four still shows behind the game-over dialog. */
+#over::backdrop { background: rgb(0 0 0 / 0.25); }
+
+@keyframes pulse { to { transform: scale(0.86); } }
+@keyframes blink { 50% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .disc.win, .player.thinking small::after { animation: none; }
+}

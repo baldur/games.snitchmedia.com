@@ -1,39 +1,195 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Tic Tac Toe</title>
-
-<script src="../js/base/jquery-1.4.4.js" type="text/javascript" charset="utf-8"></script>
-<script src="tic-tac-toe.js" type="text/javascript" charset="utf-8"></script>
-<link rel="stylesheet" href="tic-tac-toe.css" type="text/css" media="screen" charset="utf-8">
-<script type="text/javascript">
-
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-565491-11']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-
-</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tic Tac Toe</title>
+  <link rel="icon" href="../favicon.svg">
+  <link rel="stylesheet" href="../shared/site.css">
+  <link rel="stylesheet" href="../shared/game.css">
+  <link rel="stylesheet" href="tic-tac-toe.css">
 </head>
+<body>
+  <header>
+    <a href="../">&larr; Games</a>
+    <h1>Tic Tac Toe</h1>
+    <a href="../classic/tic-tac-toe/">2010 version</a>
+  </header>
 
-<body id="index" class="home">
-    <div id="msg"></div>
-    <div id="board">
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-        <div></div>
-    </div>
+  <!--
+    How this works without a single line of JavaScript
+    ===================================================
+
+    The whole game is a <form> full of checkboxes, and the stylesheet is the
+    state machine. CSS can't count, but it can ask "is there a checked box that
+    matches this selector?" with :has(), and that turns out to be enough.
+
+    1. One checkbox per square per move number.
+       Every square holds nine checkboxes, .m1 to .m9: "move 1 was played here",
+       "move 2 was played here", and so on. Odd moves are X (class .x), even
+       moves are O (class .o), so turns alternate by construction.
+
+    2. Only the next move is ever visible.
+       All checkboxes start as display: none. The CSS reveals .mN in every
+       empty square only while move N-1 has been played and move N hasn't:
+
+         .game:has(.m3:checked):not(:has(.m4:checked))
+           .cell:not(:has(:checked)) .m4 { display: block }
+
+       Ticking any .m4 box immediately makes that rule stop matching, so all
+       the other .m4 boxes vanish and the .m5 boxes appear. A square with a
+       ticked box never shows another one, and the ticked box itself is hidden,
+       so it can't be unticked. The same rule also shows "X to move" or
+       "O to move".
+
+    3. The mark is just a style.
+       .cell:has(.x:checked) draws an X, .cell:has(.o:checked) draws an O.
+       Which move number it was doesn't matter any more.
+
+    4. Wins are sixteen selectors.
+       "X has the top row" is
+         .game:has(.c1 .x:checked):has(.c2 .x:checked):has(.c3 .x:checked)
+       There are 8 lines for each player. When one matches, the winner's
+       message shows, every checkbox is hidden (no more moves), and the three
+       squares of that line light up. If move 9 was played and nobody won,
+       it's a draw.
+
+    5. New game is <button type="reset">, which unticks every box. That's
+       the native form reset, so it needs no script either.
+
+    The hidden, disabled submit button is there so pressing Enter can never
+    submit the form and reload the page: a form whose default button is
+    disabled ignores implicit submission.
+  -->
+
+  <main>
+    <form class="game" autocomplete="off" aria-label="Tic Tac Toe">
+      <button type="submit" disabled hidden></button>
+
+      <p class="status" aria-live="polite">
+        <span class="turn-x"><b class="x">X</b> to move</span>
+        <span class="turn-o"><b class="o">O</b> to move</span>
+        <span class="win-x"><b class="x">X</b> wins!</span>
+        <span class="win-o"><b class="o">O</b> wins!</span>
+        <span class="draw">It&rsquo;s a draw.</span>
+      </p>
+
+      <div class="board">
+      <div class="cell c1">
+        <input type="checkbox" class="m1 x" aria-label="X, top left">
+        <input type="checkbox" class="m2 o" aria-label="O, top left">
+        <input type="checkbox" class="m3 x" aria-label="X, top left">
+        <input type="checkbox" class="m4 o" aria-label="O, top left">
+        <input type="checkbox" class="m5 x" aria-label="X, top left">
+        <input type="checkbox" class="m6 o" aria-label="O, top left">
+        <input type="checkbox" class="m7 x" aria-label="X, top left">
+        <input type="checkbox" class="m8 o" aria-label="O, top left">
+        <input type="checkbox" class="m9 x" aria-label="X, top left">
+        <span class="mark"></span>
+      </div>
+      <div class="cell c2">
+        <input type="checkbox" class="m1 x" aria-label="X, top middle">
+        <input type="checkbox" class="m2 o" aria-label="O, top middle">
+        <input type="checkbox" class="m3 x" aria-label="X, top middle">
+        <input type="checkbox" class="m4 o" aria-label="O, top middle">
+        <input type="checkbox" class="m5 x" aria-label="X, top middle">
+        <input type="checkbox" class="m6 o" aria-label="O, top middle">
+        <input type="checkbox" class="m7 x" aria-label="X, top middle">
+        <input type="checkbox" class="m8 o" aria-label="O, top middle">
+        <input type="checkbox" class="m9 x" aria-label="X, top middle">
+        <span class="mark"></span>
+      </div>
+      <div class="cell c3">
+        <input type="checkbox" class="m1 x" aria-label="X, top right">
+        <input type="checkbox" class="m2 o" aria-label="O, top right">
+        <input type="checkbox" class="m3 x" aria-label="X, top right">
+        <input type="checkbox" class="m4 o" aria-label="O, top right">
+        <input type="checkbox" class="m5 x" aria-label="X, top right">
+        <input type="checkbox" class="m6 o" aria-label="O, top right">
+        <input type="checkbox" class="m7 x" aria-label="X, top right">
+        <input type="checkbox" class="m8 o" aria-label="O, top right">
+        <input type="checkbox" class="m9 x" aria-label="X, top right">
+        <span class="mark"></span>
+      </div>
+      <div class="cell c4">
+        <input type="checkbox" class="m1 x" aria-label="X, middle left">
+        <input type="checkbox" class="m2 o" aria-label="O, middle left">
+        <input type="checkbox" class="m3 x" aria-label="X, middle left">
+        <input type="checkbox" class="m4 o" aria-label="O, middle left">
+        <input type="checkbox" class="m5 x" aria-label="X, middle left">
+        <input type="checkbox" class="m6 o" aria-label="O, middle left">
+        <input type="checkbox" class="m7 x" aria-label="X, middle left">
+        <input type="checkbox" class="m8 o" aria-label="O, middle left">
+        <input type="checkbox" class="m9 x" aria-label="X, middle left">
+        <span class="mark"></span>
+      </div>
+      <div class="cell c5">
+        <input type="checkbox" class="m1 x" aria-label="X, center">
+        <input type="checkbox" class="m2 o" aria-label="O, center">
+        <input type="checkbox" class="m3 x" aria-label="X, center">
+        <input type="checkbox" class="m4 o" aria-label="O, center">
+        <input type="checkbox" class="m5 x" aria-label="X, center">
+        <input type="checkbox" class="m6 o" aria-label="O, center">
+        <input type="checkbox" class="m7 x" aria-label="X, center">
+        <input type="checkbox" class="m8 o" aria-label="O, center">
+        <input type="checkbox" class="m9 x" aria-label="X, center">
+        <span class="mark"></span>
+      </div>
+      <div class="cell c6">
+        <input type="checkbox" class="m1 x" aria-label="X, middle right">
+        <input type="checkbox" class="m2 o" aria-label="O, middle right">
+        <input type="checkbox" class="m3 x" aria-label="X, middle right">
+        <input type="checkbox" class="m4 o" aria-label="O, middle right">
+        <input type="checkbox" class="m5 x" aria-label="X, middle right">
+        <input type="checkbox" class="m6 o" aria-label="O, middle right">
+        <input type="checkbox" class="m7 x" aria-label="X, middle right">
+        <input type="checkbox" class="m8 o" aria-label="O, middle right">
+        <input type="checkbox" class="m9 x" aria-label="X, middle right">
+        <span class="mark"></span>
+      </div>
+      <div class="cell c7">
+        <input type="checkbox" class="m1 x" aria-label="X, bottom left">
+        <input type="checkbox" class="m2 o" aria-label="O, bottom left">
+        <input type="checkbox" class="m3 x" aria-label="X, bottom left">
+        <input type="checkbox" class="m4 o" aria-label="O, bottom left">
+        <input type="checkbox" class="m5 x" aria-label="X, bottom left">
+        <input type="checkbox" class="m6 o" aria-label="O, bottom left">
+        <input type="checkbox" class="m7 x" aria-label="X, bottom left">
+        <input type="checkbox" class="m8 o" aria-label="O, bottom left">
+        <input type="checkbox" class="m9 x" aria-label="X, bottom left">
+        <span class="mark"></span>
+      </div>
+      <div class="cell c8">
+        <input type="checkbox" class="m1 x" aria-label="X, bottom middle">
+        <input type="checkbox" class="m2 o" aria-label="O, bottom middle">
+        <input type="checkbox" class="m3 x" aria-label="X, bottom middle">
+        <input type="checkbox" class="m4 o" aria-label="O, bottom middle">
+        <input type="checkbox" class="m5 x" aria-label="X, bottom middle">
+        <input type="checkbox" class="m6 o" aria-label="O, bottom middle">
+        <input type="checkbox" class="m7 x" aria-label="X, bottom middle">
+        <input type="checkbox" class="m8 o" aria-label="O, bottom middle">
+        <input type="checkbox" class="m9 x" aria-label="X, bottom middle">
+        <span class="mark"></span>
+      </div>
+      <div class="cell c9">
+        <input type="checkbox" class="m1 x" aria-label="X, bottom right">
+        <input type="checkbox" class="m2 o" aria-label="O, bottom right">
+        <input type="checkbox" class="m3 x" aria-label="X, bottom right">
+        <input type="checkbox" class="m4 o" aria-label="O, bottom right">
+        <input type="checkbox" class="m5 x" aria-label="X, bottom right">
+        <input type="checkbox" class="m6 o" aria-label="O, bottom right">
+        <input type="checkbox" class="m7 x" aria-label="X, bottom right">
+        <input type="checkbox" class="m8 o" aria-label="O, bottom right">
+        <input type="checkbox" class="m9 x" aria-label="X, bottom right">
+        <span class="mark"></span>
+      </div>
+      </div>
+
+      <button type="reset" class="again">New game</button>
+    </form>
+
+    <p class="note">Two players, one device. Click or tap a square, or <kbd>Tab</kbd> to it and press <kbd>Space</kbd>.</p>
+    <p class="note">This page contains zero JavaScript: the rules are all <code>:has()</code> and <code>:checked</code>. That also means no sound and no gamepad, so please say &ldquo;beep&rdquo; out loud when you move.</p>
+  </main>
 </body>
 </html>
