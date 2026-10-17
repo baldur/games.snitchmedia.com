@@ -514,7 +514,40 @@ function render(time) {
   renderer.draw(frameData, list);
 }
 
+// Open the page with #tilt to see what the motion sensors are doing.
+const tiltReadout = location.hash === '#tilt' ? document.getElementById('tiltdebug') : null;
+const sensorPermissions = {};
+if (tiltReadout) {
+  tiltReadout.hidden = false;
+  for (const name of ['accelerometer', 'gyroscope', 'magnetometer']) {
+    navigator.permissions?.query({ name }).then((p) => {
+      sensorPermissions[name] = p.state;
+      p.onchange = () => { sensorPermissions[name] = p.state; };
+    }).catch(() => { sensorPermissions[name] = 'unknown'; });
+  }
+}
+let readoutTimer = 0;
+function showTilt(dt) {
+  readoutTimer -= dt;
+  if (!tiltReadout || readoutTimer > 0) return;
+  readoutTimer = 0.2;
+  const d = controls.debug;
+  const deg = (r) => (r == null ? '-' : `${((r * 180) / Math.PI).toFixed(1)}°`);
+  const num = (v) => (v == null ? '-' : v.toFixed(1));
+  const boat = race.player.boat;
+  tiltReadout.textContent = [
+    `secure page: ${isSecureContext}  permission: ${d.permission}`,
+    `sensors: ${Object.entries(sensorPermissions).map(([k, v]) => `${k} ${v}`).join(', ') || '-'}`,
+    `screen: ${screen.orientation?.type ?? '-'} ${screen.orientation?.angle ?? window.orientation ?? '-'}°`,
+    `events: orientation ${d.orientations}, motion ${d.motions}  using: ${d.source}`,
+    `beta ${num(d.beta)}  gamma ${num(d.gamma)}  accel ${d.accel ? d.accel.map(num).join(' ') : '-'}`,
+    `turn ${deg(d.turn)}  level at ${deg(d.zero)}  -> lean ${controls.tiltLean?.toFixed(2) ?? 'none'}`,
+    `tilting ${controls.tilting}  assist ${controls.assist}  roll ${deg(boat.roll)}`,
+  ].join('\n');
+}
+
 function updateHud(dt) {
+  showTilt(dt);
   if (flashTimer > 0) {
     flashTimer -= dt;
     if (flashTimer <= 0) flash.classList.remove('show');

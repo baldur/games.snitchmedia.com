@@ -40,6 +40,8 @@ export class Controls {
   #fingers = new Map(); // pointerId -> x where it came down
   #dragRudder = 0;
   #tilt = { on: false, zero: null, flip: 1, lean: 0, at: null, fused: null };
+  // What the sensors are doing, for the #tilt readout in main.js.
+  debug = { permission: 'not asked', orientations: 0, motions: 0, source: 'none', beta: null, gamma: null, accel: null, turn: null, zero: null };
 
   constructor(target) {
     addEventListener('keydown', (e) => {
@@ -78,10 +80,21 @@ export class Controls {
   // Starts reading the motion sensors. Call it from a tap or click: iOS asks
   // for permission, and only allows asking in response to one.
   async enableTilt() {
-    if (this.#tilt.on || !window.DeviceOrientationEvent) return;
+    if (this.#tilt.on) return;
+    if (!window.DeviceOrientationEvent) {
+      this.debug.permission = 'no DeviceOrientationEvent in this browser';
+      return;
+    }
     try {
-      if (DeviceOrientationEvent.requestPermission && await DeviceOrientationEvent.requestPermission() !== 'granted') return;
-    } catch {
+      if (DeviceOrientationEvent.requestPermission) {
+        this.debug.permission = 'asking';
+        this.debug.permission = await DeviceOrientationEvent.requestPermission();
+        if (this.debug.permission !== 'granted') return;
+      } else {
+        this.debug.permission = 'none needed';
+      }
+    } catch (err) {
+      this.debug.permission = `error: ${err.message}`;
       return;
     }
     this.#tilt.on = true;
@@ -111,7 +124,11 @@ export class Controls {
   // Which way is up, in the phone's own axes (x right, y up the screen held
   // upright, z out of it), from its orientation angles.
   #orientation(e) {
+    this.debug.orientations++;
+    this.debug.beta = e.beta;
+    this.debug.gamma = e.gamma;
     if (e.beta == null || e.gamma == null) return;
+    this.debug.source = 'orientation';
     const b = (e.beta * Math.PI) / 180;
     const g = (e.gamma * Math.PI) / 180;
     this.#tilt.fused = performance.now();
@@ -122,7 +139,10 @@ export class Controls {
   // when there's no orientation sensor.
   #motion(e) {
     const g = e.accelerationIncludingGravity;
+    this.debug.motions++;
+    this.debug.accel = g && [g.x, g.y, g.z];
     if (g?.x == null || performance.now() - (this.#tilt.fused ?? -Infinity) < 500) return;
+    this.debug.source = 'accelerometer';
     this.#up(g.x / 9.81, g.y / 9.81, false);
   }
 
@@ -139,6 +159,8 @@ export class Controls {
     const turn = Math.atan2(-sx * t.flip, sy * t.flip); // clockwise is positive
     if (t.zero === null) t.zero = turn;
     const d = Math.atan2(Math.sin(turn - t.zero), Math.cos(turn - t.zero));
+    this.debug.turn = turn;
+    this.debug.zero = t.zero;
     // The view rolls with the boat, so the natural move is to turn the phone
     // to keep the horizon level in your hands: turning it clockwise against a
     // roll to the right shifts your weight left.
