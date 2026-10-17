@@ -5,7 +5,7 @@ import { buildWorld } from './world.js';
 import { kayakMesh, paddleMesh, paddlerMesh, limbMesh, SEAT, SHOULDER } from './meshes.js';
 import { createRenderer } from './render.js';
 import { perspective, view, basis, multiply, translation, rotationY, rotationZ } from './mat4.js';
-import { Controls, BUTTON, TILT_REFLEX } from './controls.js';
+import { Controls, BUTTON, TILT_REFLEX, TILT_FULL, TILT_SETTLE } from './controls.js';
 import { tone, noise, isMuted, setMuted } from '../shared/audio.js';
 import { openDialog, gamepadDialogs, soundToggle } from '../shared/dialogs.js';
 
@@ -559,6 +559,7 @@ function showTilt(dt) {
     `beta ${num(d.beta)}  gamma ${num(d.gamma)}  accel ${d.accel ? d.accel.map(num).join(' ') : '-'}`,
     `turn ${deg(d.turn)}  level at ${deg(d.zero)}  -> lean ${controls.tiltLean?.toFixed(2) ?? 'none'}`,
     `tilting ${controls.tilting}  assist ${controls.assist}  roll ${deg(boat.roll)}`,
+    `settings: full lean at ${deg(TILT_FULL)}, reflex ${TILT_REFLEX}, levels over ${TILT_SETTLE} s`,
   ].join('\n');
 }
 

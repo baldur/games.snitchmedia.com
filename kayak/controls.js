@@ -24,11 +24,14 @@ export const KEYS = {
 const PAD = { LB: 4, RB: 5, LT: 6, RT: 7 };
 const DEADZONE = 0.15;
 const KEY_LEAN_RATE = 5; // keyboard lean eases in and out so taps can be gentle
-// Tuned against a simulated player who reacts after 0.3-0.4 s: a twitchier
-// setting has them over-correcting into ever bigger wobbles.
-const TILT_FULL = 0.5; // radians of phone turn (about 29 degrees) for a full lean
-const TILT_DEAD = 0.02;
-export const TILT_REFLEX = 0.3; // lean against the roll rate, as your hips would: see main.js
+// Tuned against a simulated player who reacts slowly (up to 0.6 s),
+// over-corrects and has wandering hands: a twitchier setting has them
+// over-correcting into ever bigger wobbles. Hands off, the club and racing
+// boats still go over.
+export const TILT_FULL = 0.7; // radians of phone turn (about 40 degrees) for a full lean
+const TILT_DEAD = 0.03;
+export const TILT_REFLEX = 0.45; // lean against the roll rate, as your hips would: see main.js
+export const TILT_SETTLE = 15; // seconds for a new way of holding the phone to become level
 const DRAG_FULL = 0.14; // share of the screen width to slide for full rudder
 
 export class Controls {
@@ -158,15 +161,20 @@ export class Controls {
     // front of you, "up" should point up the screen.
     if (t.zero === null) t.flip = trusted || sy >= 0 ? 1 : -1;
     const turn = Math.atan2(-sx * t.flip, sy * t.flip); // clockwise is positive
+    const now = performance.now();
     if (t.zero === null) t.zero = turn;
-    const d = Math.atan2(Math.sin(turn - t.zero), Math.cos(turn - t.zero));
+    let d = Math.atan2(Math.sin(turn - t.zero), Math.cos(turn - t.zero));
+    // Level slowly follows how you hold the phone, so a change of grip
+    // doesn't leave you leaning for the rest of the race.
+    t.zero += d * Math.min(1, (now - (t.at ?? now)) / 1000 / TILT_SETTLE);
+    d = Math.atan2(Math.sin(turn - t.zero), Math.cos(turn - t.zero));
     this.debug.turn = turn;
     this.debug.zero = t.zero;
     // As in the boat: when it dips to the right, lean away from it by turning
     // the phone anticlockwise. Clockwise shifts your weight right.
     const target = clamp(Math.sign(d) * Math.max(0, Math.abs(d) - TILT_DEAD) / TILT_FULL);
     t.lean += (target - t.lean) * 0.5; // sensors are noisy: smooth a little
-    t.at = performance.now();
+    t.at = now;
   }
 
   // Once per animation frame: reads gamepads. Returns buttons newly pressed, for menus.
