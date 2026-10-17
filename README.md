@@ -22,7 +22,7 @@ The 2026 revival is being built in collaboration with [Claude Code](https://clau
 | [Snake](classic/snake/) | Classic only | Web Worker |
 | [Bricks](classic/bricks/) | Classic only | |
 | [Connect Four](classic/connect_four/) | Classic only | |
-| [Tic Tac Toe](classic/tic-tac-toe/) | Classic only | |
+| [Tic Tac Toe](tic-tac-toe/) | Rebuilt 2026 | Zero JavaScript: CSS `:has()` and `:checked` state machine, `@property` animations, container queries, form reset |
 
 ## The rules
 
