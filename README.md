@@ -24,7 +24,7 @@ The 2026 revival is being built in collaboration with [Claude Code](https://clau
 | [Snake](snake/) | Rebuilt 2026 | Canvas 2D, module Web Worker (attract-mode AI), Device Orientation (tilt steering), Screen Wake Lock, Gamepad API, Web Audio, Pointer Events (swipe), Vibration, `<dialog>` |
 | [Bricks](bricks/) | Rebuilt 2026 | WebGPU (compute-shader particles, Canvas 2D fallback), Canvas 2D, Gamepad API, Web Audio, Pointer Events, Vibration, `<dialog>`, localStorage |
 | [Connect Four](connect-four/) | Rebuilt 2026 | DOM + CSS grid board, Web Animations, module Web Worker (minimax AI), Gamepad API, Web Audio, Vibration, `aria-live`, `<dialog>` |
-| [Kayak](kayak/) | New 2026, in progress | A first-person marathon kayak race against a pack of computer paddlers: hand-written WebGPU renderer (no engine), procedural low-poly world, water shader with boat wakes, rhythm, wash-riding and stamina physics, a starter who talks through the Web Speech API, Gamepad API, Web Audio noise synthesis, touch |
+| [Kayak](kayak/) | New 2026, in progress | A first-person marathon kayak race against a pack of computer paddlers: hand-written WebGPU renderer (no engine), procedural low-poly world, water shader with boat wakes, rhythm, wash-riding and stamina physics, a starter who talks through the Web Speech API, Gamepad API, Web Audio noise synthesis, touch, phone tilt for balance (DeviceMotion), resolution that adapts to the GPU |
 | [Tic Tac Toe](tic-tac-toe/) | Rebuilt 2026 | Zero JavaScript: CSS `:has()` and `:checked` state machine, `@property` animations, container queries, form reset |
 
 ## The rules

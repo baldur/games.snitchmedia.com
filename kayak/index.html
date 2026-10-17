@@ -26,6 +26,7 @@
       <span id="pos">1st / 8</span>
     </div>
     <p id="wash">On the wash</p>
+    <p id="assisted">Balance assist on: tilt isn't available</p>
     <div class="hud-bottom">
       <div class="readout">
         <span><b id="speed">0.0</b> km/h</span>
@@ -60,19 +61,20 @@
       <button value="race" autofocus>Division 9 race <small>6 km, 12 paddlers</small></button>
       <button value="practice">Practice time trial <small>1 km, on your own</small></button>
     </form>
+    <p class="rotate-hint">Turn your phone sideways to race</p>
     <p id="best"></p>
     <p id="nogpu" class="warning" hidden></p>
     <details>
       <summary>Controls</summary>
       <ul>
-        <li><kbd>&larr;</kbd> <kbd>&rarr;</kbd> paddle strokes. Alternate them on a steady beat: rhythm is speed. Uneven strokes, two on one side, steering hard and bumping into people all knock you off it</li>
-        <li>The start: come up to the line and wait for the horn. It comes without warning after "Are you ready?" Go early and everyone waits while the line comes up to you</li>
+        <li><kbd>&larr;</kbd> <kbd>&rarr;</kbd> paddle strokes. Alternate them on a steady beat, about 95 a minute when racing: rhythm is speed. Uneven strokes, two on one side, steering hard and bumping into people all knock you off it</li>
+        <li>The start: you begin behind the field. Paddle up into a gap on the line, stop, and wait for the horn. It comes without warning after "Are you ready?" Go early and everyone waits while the line comes up to you</li>
         <li><kbd>A</kbd> <kbd>D</kbd> lean to keep your balance. Standing still is wobbly; speed steadies you</li>
         <li><kbd>Q</kbd> <kbd>E</kbd> rudder. It only bites when you're moving</li>
         <li>Tuck in right behind a boat, or alongside its back half, to ride its wash: the same effort goes further, but the boat rocks more</li>
         <li>Race distances and times are shown four times longer than you actually paddle, so a 6 km race takes about 7 minutes</li>
         <li>Gamepad: <kbd>LT</kbd> <kbd>RT</kbd> strokes, left stick rudder, right stick lean</li>
-        <li>Touch: tap the left or right half of the screen to stroke</li>
+        <li>Phone, held sideways: tap the left or right half of the screen to stroke, and slide a finger that's down left or right to steer. Turn the phone like a steering wheel to keep the horizon level: that's your balance. (Tilt needs the page over HTTPS on iPhone; without it, balance is done for you)</li>
         <li><kbd>P</kbd> or <kbd>Esc</kbd> to pause, <kbd>M</kbd> to toggle sound</li>
       </ul>
     </details>
@@ -81,6 +83,7 @@
 
   <dialog id="paused">
     <h2>Paused</h2>
+    <p class="rotate-hint">Turn your phone sideways to race</p>
     <form method="dialog">
       <button value="resume" autofocus>Resume</button>
       <button value="restart">Restart</button>

@@ -4,6 +4,9 @@ body {
   padding: 0;
   overflow: hidden;
   background: #9fb8c8;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 #view {
@@ -95,6 +98,35 @@ header button {
   transition: opacity 0.4s;
 }
 #wash.on { opacity: 1; }
+
+#assisted {
+  position: absolute;
+  inset: auto 0 9.5rem;
+  margin: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  display: none;
+}
+#hud.assisted #assisted { display: block; }
+
+.rotate-hint { display: none; color: var(--accent); font-weight: 700; }
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-hint { display: block; }
+}
+
+/* A phone on its side: little height, so tuck everything closer to the edges. */
+@media (max-height: 500px) {
+  header { padding: 0.35rem 16px; }
+  header h1 { font-size: 1rem; }
+  header button { padding: 0.3rem 0.7rem; font-size: 0.85rem; }
+  .hud-top { top: 2.6rem; font-size: 1.1rem; }
+  #wash { top: 4.6rem; }
+  .hud-bottom { inset: auto 16px 8px; }
+  #balance { width: 110px; }
+  .readout b { font-size: 1.2rem; }
+  #assisted { bottom: 5.5rem; }
+}
 
 #standings { columns: 2; column-gap: 2rem; padding-left: 1.5rem; font-family: var(--mono); font-size: 0.9rem; }
 #standings .you { font-weight: 700; color: var(--accent); }

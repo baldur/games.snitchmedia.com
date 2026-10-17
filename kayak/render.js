@@ -5,6 +5,11 @@ import { waterGrid } from './meshes.js';
 
 const SAMPLES = 4; // MSAA
 const FRAME_BYTES = 16 * 4 + 24 * 16;
+// Resolution follows the GPU: if frames take longer than this to draw, render
+// fewer pixels (down to half the screen's density); when there's room again,
+// creep back up. Phones start lower, since their screens are dense and small.
+const BUDGET_MS = 11;
+const MAX_DPR = matchMedia('(pointer: coarse)').matches ? 1.5 : 2;
 
 export async function createRenderer(canvas) {
   if (!navigator.gpu) throw new Error('WebGPU is not available in this browser.');
@@ -60,8 +65,24 @@ export async function createRenderer(canvas) {
 
   let color = null;
   let depth = null;
+  let scale = 1; // share of the full resolution we draw at
+  let gpuMs = 0; // smoothed time from submitting a frame to the GPU finishing it
+  let measuring = false;
+  let settled = 0; // seconds since the last change of scale
+  let lastDraw = performance.now();
+
+  function adapt(now) {
+    settled += Math.min(0.1, (now - lastDraw) / 1000);
+    lastDraw = now;
+    if (settled < 1.5) return;
+    if (gpuMs > BUDGET_MS && scale > 0.5) scale = Math.max(0.5, scale * 0.85);
+    else if (gpuMs < BUDGET_MS * 0.5 && scale < 1 && settled > 4) scale = Math.min(1, scale * 1.1);
+    else return;
+    settled = 0;
+  }
+
   function resize() {
-    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const dpr = Math.min(devicePixelRatio || 1, MAX_DPR) * scale;
     const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
     const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
     if (color && canvas.width === w && canvas.height === h) return;
@@ -88,14 +109,15 @@ export async function createRenderer(canvas) {
 
     // Sets a mesh's model matrices for the next frames (an array of Float32Array(16)).
     place(m, matrices) {
-      const data = new Float32Array(matrices.length * 16);
-      matrices.forEach((mat, i) => data.set(mat, i * 16));
-      device.queue.writeBuffer(m.instances, 0, data);
+      m.scratch ??= new Float32Array(m.instances.size / 4);
+      matrices.forEach((mat, i) => m.scratch.set(mat, i * 16));
+      device.queue.writeBuffer(m.instances, 0, m.scratch, 0, matrices.length * 16);
       m.instanceCount = matrices.length;
     },
 
     // frameData: Float32Array laid out like the WGSL Frame struct.
     draw(frameData, meshes) {
+      adapt(performance.now());
       resize();
       device.queue.writeBuffer(frameBuffer, 0, frameData);
       const encoder = device.createCommandEncoder();
@@ -124,6 +146,19 @@ export async function createRenderer(canvas) {
       pass.draw(gridCount);
       pass.end();
       device.queue.submit([encoder.finish()]);
+      if (!measuring) {
+        measuring = true;
+        const t0 = performance.now();
+        device.queue.onSubmittedWorkDone().then(() => {
+          gpuMs += (performance.now() - t0 - gpuMs) * 0.2;
+          measuring = false;
+        });
+      }
+    },
+
+    // For the debug hook: how the adaptive resolution is doing.
+    get stats() {
+      return { scale, gpuMs, width: canvas.width, height: canvas.height };
     },
 
     get aspect() {

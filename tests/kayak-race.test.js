@@ -1,11 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBoat, step } from '../kayak/sim.js';
-import { raceRiver, pointAt, locate } from '../kayak/course.js';
+import { raceRiver, pointAt, locate, headingAt } from '../kayak/course.js';
+import { wrap } from '../kayak/sim.js';
 import { createRace, stepRace, standings, started, wash, DIVISION_9 } from '../kayak/race.js';
 
 const DT = 1 / 120;
 const balance = (b) => Math.max(-1, Math.min(1, -(b.roll * 2 + b.rollRate * 0.6)));
+
+const nearestGap = (race) => race.gaps.reduce((a, b) => (Math.abs(b) < Math.abs(a) ? b : a));
+
+// The player's input for one step: paddle up into the nearest gap on the start
+// line at `interval` seconds a stroke, then sit still on it (or, with
+// `through`, keep going over it).
+function lineUp(race, { interval = 0.75, through = false } = {}) {
+  const { boat, loc } = race.player;
+  const bow = loc.s + 3.3;
+  const strokes = [];
+  if ((through || bow < race.start.line - 1.2) && boat.time - boat.lastStroke >= (bow > race.start.line - 4 ? 1.2 : interval)) {
+    strokes.push(boat.lastSide === 'left' ? 'right' : 'left');
+  }
+  // Head for the gap's lane, then straighten up along the river.
+  const along = headingAt(race.course, loc.s);
+  const want = along + Math.max(-0.35, Math.min(0.35, (nearestGap(race) - loc.lateral) * 0.2));
+  const err = wrap(want - boat.heading);
+  return { strokes, rudder: Math.max(-1, Math.min(1, err * 3 - boat.yawRate * 0.5)), lean: balance(boat) };
+}
 
 // A boat at (0, 0) heading up -z at racing speed, and a point relative to it.
 const leader = () => Object.assign(createBoat(), { speed: 3.6 });
@@ -38,7 +58,7 @@ test('riding a wash is faster for the same effort', () => {
     let side = 'left';
     for (let t = 0; t < 30; t += DT) {
       const strokes = [];
-      if (t >= next) { strokes.push(side); side = side === 'left' ? 'right' : 'left'; next += 0.36; }
+      if (t >= next) { strokes.push(side); side = side === 'left' ? 'right' : 'left'; next += 0.62; }
       step(boat, DT, { strokes, lean: balance(boat), draft });
     }
     return boat.speed;
@@ -62,8 +82,11 @@ test('touching hulls are pushed apart and count as one bump', () => {
 test('a pack of rivals races a full 6 km without capsizing, finishing in about 28 minutes', () => {
   const course = raceRiver();
   const race = createRace(course, { rivals: DIVISION_9, seed: 3 });
-  // The player sits still behind the line, out of the way.
-  while (!started(race)) stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) });
+  // The player comes up to the line, then just sits there.
+  for (let t = 0; !started(race); t += DT) {
+    assert.ok(t < 60, 'the start never came');
+    stepRace(race, DT, lineUp(race));
+  }
   while (race.time < 600 && race.racers.some((r) => r.ai && r.finish === null)) {
     stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) });
   }
@@ -99,7 +122,8 @@ test('the horn comes after "Are you ready?", at an unpredictable moment', () => 
     const calls = [];
     let t = 0;
     while (!started(race)) {
-      for (const e of stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) }).events) calls.push([e, t]);
+      assert.ok(t < 60, 'the start never came');
+      for (const e of stepRace(race, DT, lineUp(race)).events) if (e !== 'stroke' && e !== 'weak') calls.push([e, t]);
       t += DT;
     }
     assert.deepEqual(calls.map(([e]) => e), ['line-up', 'ready', 'go']);
@@ -109,16 +133,40 @@ test('the horn comes after "Are you ready?", at an unpredictable moment', () => 
   assert.ok(waits.size > 1);
 });
 
+test('the rivals wait on the line with gaps, and you paddle up into one', () => {
+  const race = createRace(raceRiver(), { rivals: DIVISION_9, seed: 5 });
+  assert.equal(race.gaps.length, 2);
+  const line = race.start.line;
+  for (const r of race.racers.filter((r) => r.ai)) {
+    assert.ok(Math.abs(r.loc.s + 3.3 - line) < 1.5, `${r.name} on the line`);
+    for (const g of race.gaps) assert.ok(Math.abs(r.loc.lateral - g) > 1, `${r.name} clear of the gap`);
+  }
+  assert.ok(race.player.loc.s + 3.3 < line - 10, 'you start behind the line');
+  for (let t = 0; !started(race); t += DT) {
+    assert.ok(t < 60, 'the start never came');
+    stepRace(race, DT, lineUp(race));
+  }
+  assert.ok(Math.abs(race.player.loc.lateral - nearestGap(race)) < 0.8, 'in the gap');
+  assert.ok(Math.abs(race.player.loc.s + 3.3 - line) < 2.5, 'level with the others');
+});
+
+test('the starter waits for you, and calls you up again', () => {
+  const race = createRace(raceRiver(), { rivals: DIVISION_9, seed: 6 });
+  const calls = [];
+  for (let t = 0; t < 30; t += DT) calls.push(...stepRace(race, DT, { strokes: [], lean: balance(race.player.boat) }).events);
+  assert.deepEqual(calls, ['line-up', 'nudge', 'nudge']);
+  assert.equal(started(race), false);
+});
+
 test('jumping the start holds it until the field comes up level, then starts again', () => {
   const race = createRace(raceRiver(), { rivals: DIVISION_9, seed: 4 });
   const calls = [];
-  let side = 'left';
-  for (let t = 0, next = 1; !started(race) && t < 60; t += DT) {
-    const strokes = [];
-    if (t > 1 && t < 3 && t >= next) { strokes.push(side); side = side === 'left' ? 'right' : 'left'; next = t + 0.35; }
-    calls.push(...stepRace(race, DT, { strokes, lean: balance(race.player.boat) }).events.filter((e) => e !== 'stroke' && e !== 'weak'));
+  for (let t = 0; !started(race) && t < 90; t += DT) {
+    // Charge at the line and over it, then sit still.
+    const input = lineUp(race, { interval: 0.55, through: race.start.phase !== 'hold' && !race.start.holds });
+    calls.push(...stepRace(race, DT, input).events.filter((e) => e !== 'stroke' && e !== 'weak'));
   }
-  assert.deepEqual(calls, ['line-up', 'ready', 'hold', 'line-up', 'ready', 'go']);
+  assert.deepEqual(calls.slice(calls.indexOf('hold')), ['hold', 'line-up', 'ready', 'go']);
   assert.ok(race.start.line > race.course.start, 'the line moved up to the jumper');
-  for (const r of race.racers) assert.ok(Math.abs(r.loc.s + 3.3 - race.start.line) < 1.5, `${r.name} is level`);
+  for (const r of race.racers) assert.ok(Math.abs(r.loc.s + 3.3 - race.start.line) < 2.5, `${r.name} is level`);
 });

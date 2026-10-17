@@ -4,19 +4,22 @@
 
 export const BOAT = {
   // Strokes: each one adds speed; drag takes it away again. Tuned to real K1
-  // speeds: about 10 km/h at an easy rhythm, 12-13 km/h at a sustainable racing
-  // rhythm, 17-18 km/h flat out on fresh legs.
-  impulse: 0.35, // m/s from a clean stroke at full stamina
-  minInterval: 0.2, // strokes closer together than this catch less water
+  // marathon paddling, counting every blade: about 10 km/h at an easy 65-70
+  // strokes a minute, 12-13 km/h at a racing 95-100, and 14-15 km/h sprinting
+  // at a little over 110.
+  impulse: 0.62, // m/s from a clean stroke at full stamina
+  minInterval: 0.45, // strokes closer together than this catch less water
   sameSide: 0.45, // power of a second stroke on the same side
   drag: 0.067, // quadratic
   linearDrag: 0.02,
-  strokeTime: 0.32, // how long the blade is in the water
+  strokeTime: 0.45, // how long the blade is in the water
 
-  // Stamina: drains with every stroke, recovers all the time. They balance at
-  // about one stroke every 0.33 s: faster than that eats into your reserve.
-  cost: 0.012,
-  recover: 0.036,
+  // Stamina: drains with every stroke, recovers all the time. A quicker stroke
+  // costs more (with the square of the rate), and the two balance at
+  // `costBeat`, about 97 a minute: faster than that eats into your reserve.
+  cost: 0.017,
+  costBeat: 0.62,
+  recover: 0.017 / 0.62,
 
   // Steering: the rudder needs speed to bite; strokes nudge the bow.
   rudder: 0.16, // target yaw rate per m/s of speed
@@ -51,7 +54,7 @@ export const BOAT = {
   rhythmGain: 0.1, // per stroke right on the beat
   rhythmSlop: 0.15, // how far off the beat (as a fraction) still counts
   rhythmBase: 0.6,
-  slowBeat: 0.42, // seconds per stroke: a lazier beat than this caps your rhythm
+  slowBeat: 0.72, // seconds per stroke: a lazier beat than this caps your rhythm
   steerCost: 0.2, // rhythm lost per second of full rudder, which also stops it building
   fallCost: 0.4, // capsizing also costs this much stamina-equivalent speed
   beam: 1, // hull width, for the mesh
@@ -63,13 +66,13 @@ export const HULLS = {
   stable: {
     ...BOAT, name: 'Stable', beam: 1.3,
     drag: 0.074, tip: 2.5, stabilitySpeed: 0.6,
-    rhythmBase: 0.75, slowBeat: 0.5, swimTime: 3, fallCost: 0.3,
+    rhythmBase: 0.75, slowBeat: 0.85, swimTime: 3, fallCost: 0.3,
   },
   club: { ...BOAT, name: 'Club racer' },
   racing: {
     ...BOAT, name: 'Racing', beam: 0.8,
     drag: 0.06, tip: 3.6, stabilityStill: 2.4, brace: 0.6,
-    rhythmBase: 0.45, slowBeat: 0.37, rhythmSlop: 0.12, swimTime: 5, fallCost: 0.55,
+    rhythmBase: 0.45, slowBeat: 0.66, rhythmSlop: 0.12, swimTime: 5, fallCost: 0.55,
   },
 };
 
@@ -170,7 +173,7 @@ function stroke(boat, side) {
   boat.speed += H.impulse * boat.power * quality * (H.rhythmBase + (1 - H.rhythmBase) * boat.rhythm);
   boat.yawRate += dir * H.strokeYaw * (repeat ? 2.5 : 1) * Math.max(quality, 0.3);
   boat.rollRate += -dir * H.strokeRoll * (repeat ? 2 : 1);
-  boat.stamina = Math.max(0, boat.stamina - H.cost * Math.min(1, gap / H.minInterval));
+  boat.stamina = Math.max(0, boat.stamina - H.cost * (H.costBeat / Math.max(gap, H.minInterval)) ** 2);
 
   boat.lastSide = side;
   boat.lastStroke = boat.time;
@@ -180,6 +183,12 @@ function stroke(boat, side) {
   return quality < 0.6 ? 'weak' : 'stroke';
 }
 
+// The beat a boat can keep up for ever: stamina spent per second at it
+// (cost * (costBeat / beat)^2 / beat) equals what it recovers.
+export function steadyBeat(boat) {
+  return boat.hull.costBeat / Math.cbrt(boat.endurance);
+}
+
 // Rhythm bookkeeping for one stroke, `gap` seconds after the previous one.
 function keepTime(boat, gap, repeat) {
   const H = boat.hull;
@@ -187,13 +196,13 @@ function keepTime(boat, gap, repeat) {
     boat.rhythm -= 0.2;
   } else if (!boat.beat || gap > boat.beat * 2) {
     if (boat.beat) boat.rhythm -= 0.25;
-    boat.beat = Math.min(gap, 0.8); // starting up: this gap is the first guess at a beat
+    boat.beat = Math.min(gap, 1.3); // starting up: this gap is the first guess at a beat
   } else {
     const off = Math.abs(gap - boat.beat) / boat.beat;
     boat.rhythm += off < H.rhythmSlop ? H.rhythmGain * (1 - off / H.rhythmSlop) * (1 - boat.steer) : -Math.min(0.3, off - H.rhythmSlop);
     boat.beat += (gap - boat.beat) * 0.25; // speeding up or easing off gradually keeps the rhythm
   }
-  const cap = Math.min(1, 1 - (boat.beat - H.slowBeat) * 4);
+  const cap = Math.min(1, 1 - (boat.beat - H.slowBeat) * 2.5);
   boat.rhythm = Math.max(0, Math.min(cap, boat.rhythm));
 }
 
@@ -224,11 +233,13 @@ function slap(t) {
   return Math.sin(5.3 * t) * (0.6 + 0.4 * Math.sin(0.9 * t + 1)) + 0.4 * Math.sin(8.1 * t + 0.5);
 }
 
-// Keeps the boat inside the river. `loc` comes from course.locate(). Hitting the
-// bank costs speed once; after that the boat scrapes along it with the bow
-// turned slightly away. Returns true on the moment of impact.
-export function bounceOffBank(boat, loc, halfWidth) {
-  const limit = halfWidth - 1;
+// Keeps the boat inside the river. `loc` comes from course.locate(); `left` and
+// `right` are how far the open water reaches each side of the centreline (a
+// moored boat counts as bank). Hitting the bank costs speed once; after that
+// the boat scrapes along it with the bow turned slightly away. Returns true on
+// the moment of impact.
+export function bounceOffBank(boat, loc, left, right = left) {
+  const limit = (loc.lateral < 0 ? left : right) - 1;
   if (Math.abs(loc.lateral) <= limit) {
     boat.onBank = false;
     return false;

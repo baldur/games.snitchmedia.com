@@ -77,6 +77,7 @@ function reset() {
 
 function start() {
   reset();
+  controls.calibrate();
   state = 'start';
   hud.hidden = false;
   hud.classList.toggle('solo', race.racers.length === 1);
@@ -178,6 +179,23 @@ for (const radio of menu.querySelectorAll('input[name="hull"]')) {
   });
 }
 
+// Phones: the race buttons are the tap that lets us ask for the motion
+// sensors, and for full screen held sideways where the browser allows it.
+const phone = matchMedia('(pointer: coarse)');
+menu.querySelector('form').addEventListener('click', (e) => {
+  if (!e.target.closest('button') || !phone.matches) return;
+  controls.enableTilt();
+  if (document.fullscreenEnabled && !document.fullscreenElement) {
+    document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+      .then(() => screen.orientation?.lock?.('landscape'))
+      .catch(() => {});
+  }
+});
+// Turned upright mid-race: pause, and the pause screen says to turn it back.
+matchMedia('(orientation: portrait) and (pointer: coarse)').addEventListener('change', (e) => {
+  if (e.matches) pause();
+});
+
 menu.addEventListener('cancel', (e) => e.preventDefault());
 menu.addEventListener('close', () => {
   if (!MODES[menu.returnValue]) return;
@@ -253,10 +271,12 @@ const sounds = {
   },
 };
 
-// The starter's voice, through the browser's own speech synthesis.
+// The starter's voice, through the browser's own speech synthesis. Asking for
+// the voices early saves a stall on the first call.
+window.speechSynthesis?.getVoices();
 function say(text) {
   if (isMuted() || !window.speechSynthesis) return;
-  speechSynthesis.cancel();
+  if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.rate = 1.05;
   u.pitch = 0.9;
@@ -269,16 +289,18 @@ function react({ events, splashes }) {
     if (e === 'stroke') controls.rumble(0.25, 40);
     if (e === 'weak') show('Weak stroke', { small: true, hold: 0.5 });
     if (e === 'capsize') {
-      show('Capsized!', { hold: BOAT.swimTime - 0.5 });
+      show('Capsized!', { hold: race.player.boat.hull.swimTime - 0.5 });
       controls.rumble(1, 400);
     }
     if (e === 'bank') controls.rumble(0.8, 150);
     if (e === 'bump') controls.rumble(0.6, 120);
     if (e === 'finish') finish();
     if (e === 'line-up') say(race.start.holds ? 'Back to the line' : 'Paddlers, come up to the line');
+    if (e === 'nudge') say("Come on up to the line, please. We're waiting for you");
     if (e === 'ready') say('Are you ready?');
     if (e === 'hold') say('Hold it! Hold the line!');
-    if (e === 'line-up') show(race.start.holds ? 'Come back up to the line' : 'Come up to the line', { small: true, hold: 2.5 });
+    if (e === 'line-up') show(race.start.holds ? 'Come back up to the line' : race.racers.length > 1 ? 'Paddle up into a gap on the line' : 'Wait for the horn', { small: true, hold: 3 });
+    if (e === 'nudge') show('Paddle up to the line and stop', { small: true, hold: 3 });
     if (e === 'ready') show('Are you ready?', { small: true, hold: 1 });
     if (e === 'go') {
       state = 'racing';
@@ -308,6 +330,7 @@ function simulate(dt) {
   } else if (state !== 'racing' && state !== 'start') {
     return;
   }
+  if (controls.assist) input.lean = Math.max(-1, Math.min(1, input.lean - (boat.roll * 2 + boat.rollRate * 0.6)));
   react(stepRace(race, dt, input));
 }
 
@@ -323,7 +346,7 @@ function boatFrame(b) {
   // During a capsize the boat rolls right over, then rights itself.
   let roll = b.roll;
   if (b.swim > 0) {
-    const t = BOAT.swimTime - b.swim;
+    const t = b.hull.swimTime - b.swim;
     const over = Math.min(1, t / 0.5) * Math.min(1, b.swim / 0.6);
     roll = Math.sign(b.roll || 1) * (BOAT.capsize + (1.9 - BOAT.capsize) * over);
   }
@@ -366,7 +389,7 @@ function paddlePose(b) {
 // top hand stays high and the torso unwinds through each stroke.
 const PADDLE_HALF = 0.85; // shaft centre to blade centre
 function rivalPaddle(b) {
-  const beat = Math.min(0.7, Math.max(0.25, b.beat ?? 0.4));
+  const beat = Math.min(1.1, Math.max(0.45, b.beat ?? 0.65));
   const t = b.time - b.paddle.at;
   if (!b.paddle.side || b.swim > 0 || t > beat * 1.6) {
     return { matrix: frameFrom([0, 0.5, -0.3], [1, 0, 0]), twist: 0 };
@@ -509,6 +532,7 @@ function updateHud(dt) {
   els.stamina.style.transform = `scaleX(${boat.stamina.toFixed(3)})`;
   els.rhythm.style.transform = `scaleX(${boat.rhythm.toFixed(3)})`;
   els.rhythm.parentElement.classList.toggle('locked', boat.rhythm > 0.9);
+  hud.classList.toggle('assisted', controls.assist);
   const angle = Math.max(-1.1, Math.min(1.1, boat.roll / BOAT.capsize)) * 90;
   els.needle.style.transform = `rotate(${angle.toFixed(1)}deg)`;
 }
@@ -586,6 +610,7 @@ if (location.hash === '#debug') {
     get loc() { return race.player.loc; },
     get course() { return race.course; },
     get state() { return state; },
+    get gpu() { return renderer?.stats; },
   };
 }
 

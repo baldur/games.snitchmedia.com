@@ -1,13 +1,19 @@
 // River courses: a smooth centreline through control points, densely sampled
 // with the distance along it, so any position can be turned into "how far
-// along" and "how far off the middle". Pure, no DOM.
+// along" and "how far off the middle". Width varies along the way, and
+// narrowboats moored against a bank take up some of it. Pure, no DOM.
 
 const SPACING = 2; // metres between samples
 
+const NARROWBOAT = 2.1; // beam of a moored narrowboat, metres
+
 // points: [[x, z], ...] in paddling order. start/finish are distances along the river.
+// width: metres from bank to bank, or a function of the distance along.
+// moorings: [{ s, length, side }]: a narrowboat moored against the left (-1) or
+// right (1) bank, centred `s` metres along. bridges: distances along.
 // warp: race distances and times are shown this many times longer than they
 // really are, so a 6 km marathon fits in a few minutes of play (see README).
-export function createCourse(points, { width = 34, start = 60, finish = 1060, warp = 1 } = {}) {
+export function createCourse(points, { width = 20, start = 60, finish = 1060, warp = 1, moorings = [], bridges = [] } = {}) {
   const raw = [];
   for (let i = 0; i < points.length - 1; i++) {
     const p0 = points[Math.max(i - 1, 0)];
@@ -40,9 +46,34 @@ export function createCourse(points, { width = 34, start = 60, finish = 1060, wa
     const len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
     p.tx = (b.x - a.x) / len;
     p.tz = (b.z - a.z) / len;
+    // half: centreline to bank. left/right: centreline to the open water's edge.
+    p.half = (typeof width === 'function' ? width(p.s) : width) / 2;
+    p.left = p.half;
+    p.right = p.half;
+    for (const m of moorings) {
+      if (Math.abs(p.s - m.s) < m.length / 2 + 1) p[m.side < 0 ? 'left' : 'right'] = p.half - NARROWBOAT;
+    }
   });
 
-  return { samples, width, start, finish, warp, length: (samples.length - 1) * SPACING };
+  return { samples, start, finish, warp, moorings, bridges, length: (samples.length - 1) * SPACING };
+}
+
+// The open water at a distance along: { half, left, right } in metres from the centreline.
+export function widthAt(course, s) {
+  const { samples } = course;
+  return samples[Math.max(0, Math.min(samples.length - 1, Math.round(s / SPACING)))];
+}
+
+// The narrowest the open water gets on each side over the next `ahead` metres.
+export function roomAhead(course, s, ahead) {
+  let left = Infinity;
+  let right = Infinity;
+  for (let d = 0; d <= ahead; d += SPACING) {
+    const w = widthAt(course, s + d);
+    left = Math.min(left, w.left);
+    right = Math.min(right, w.right);
+  }
+  return { left, right };
 }
 
 // Nearest point on the centreline. `hint` (a previous result's index) limits the
@@ -93,18 +124,37 @@ export function practiceRiver() {
   for (let i = 0; i <= 14; i++) {
     points.push([Math.sin(i * 1.1) * 50 + Math.sin(i * 0.37) * 25, -i * 100]);
   }
-  return createCourse(points, { width: 34, start: 60, finish: 1060 });
+  return createCourse(points, {
+    width: 20, start: 60, finish: 1060,
+    moorings: [{ s: 420, length: 18, side: 1 }, { s: 445, length: 16, side: 1 }],
+    bridges: [700],
+  });
 }
 
-// A division race: `km` on the HUD, through wider, longer bends for a pack.
+// A division race on an English lowland river: `km` on the HUD. A wide reach
+// for the start line, then 14-19 m between the banks, with boats moored along
+// the way and a couple of old bridges.
 export function raceRiver(km = 6, warp = 4) {
   const start = 80;
   const finish = start + (km * 1000) / warp;
   const points = [];
   for (let i = 0; i * 100 <= finish + 160; i++) {
-    points.push([Math.sin(i * 0.7) * 70 + Math.sin(i * 0.29 + 1) * 45, -i * 100]);
+    points.push([Math.sin(i * 0.7) * 60 + Math.sin(i * 0.29 + 1) * 40, -i * 100]);
   }
-  return createCourse(points, { width: 48, start, finish, warp });
+  const reach = (s) => 16.5 + 2 * Math.sin(s * 0.011) + 1.2 * Math.sin(s * 0.029 + 2);
+  const width = (s) => {
+    const k = Math.max(0, Math.min(1, (s - start - 50) / 120)); // the start reach narrows down
+    return 30 + (reach(s) - 30) * k * k * (3 - 2 * k);
+  };
+  const moorings = [];
+  for (const [at, side, count] of [[420, 1, 3], [700, -1, 2], [980, 1, 4], [1290, -1, 3]]) {
+    for (let k = 0, s = at; k < count; k++) {
+      const length = 15 + ((k * 7 + at) % 7);
+      moorings.push({ s: s + length / 2, length, side });
+      s += length + 1.5;
+    }
+  }
+  return createCourse(points, { width, start, finish, warp, moorings, bridges: [600, 1150] });
 }
 
 function catmullRom(p0, p1, p2, p3, t) {

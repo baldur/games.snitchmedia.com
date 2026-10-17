@@ -121,17 +121,21 @@ fn ripple(p: vec2f, t: f32) -> vec2f {
 
 // Every boat's wake, which moves with the boat: two arms of diverging waves
 // spreading back from the bow at about 20 degrees, and a narrow churned trail
-// behind the stern. x is height, y is how much foam.
+// behind the stern. x is height, y is how much foam. This runs for every
+// boat, three times for every pixel of water, so anything a wake can't
+// reach is skipped before the expensive part.
 fn wake(p: vec2f) -> vec2f {
   var out = vec2f(0.0);
   for (var i = 0u; i < 16u; i++) {
     let b = frame.boats[i];
     if (b.w < 0.2) { continue; }
-    let f = vec2f(sin(b.z), -cos(b.z));
     let d = p - b.xy;
+    if (dot(d, d) > 2304.0) { continue; } // 48 m
+    let f = vec2f(sin(b.z), -cos(b.z));
     let back = 3.3 - dot(d, f); // metres behind the bow
     if (back < -0.6 || back > 45.0) { continue; }
     let lat = abs(d.x * -f.y + d.y * f.x);
+    if (lat > 1.8 + back * 0.48) { continue; }
     let strength = min(b.w / 4.0, 1.0);
     let arm = lat - 0.22 - back * 0.36;
     let width = 0.35 + back * 0.05;
@@ -148,21 +152,25 @@ fn wake(p: vec2f) -> vec2f {
   return out;
 }
 
-fn surface(p: vec2f, t: f32) -> f32 {
-  return height(p, t) + wake(p).x;
-}
-
 @fragment fn fs(in: Out) -> @location(0) vec4f {
   let t = frame.camPos.w;
   let p = in.world.xz;
+  let toEye = frame.camPos.xyz - in.world;
+  let dist = length(toEye);
+  // Slopes by forward differences. Far off, wakes are too small to see.
   let e = 0.05;
-  let dx = (surface(p + vec2f(e, 0.0), t) - surface(p - vec2f(e, 0.0), t)) / (2.0 * e);
-  let dz = (surface(p + vec2f(0.0, e), t) - surface(p - vec2f(0.0, e), t)) / (2.0 * e);
+  let h = height(p, t);
+  var dx = (height(p + vec2f(e, 0.0), t) - h) / e;
+  var dz = (height(p + vec2f(0.0, e), t) - h) / e;
+  var w = vec2f(0.0);
+  if (dist < 140.0) {
+    w = wake(p);
+    dx += (wake(p + vec2f(e, 0.0)).x - w.x) / e;
+    dz += (wake(p + vec2f(0.0, e)).x - w.x) / e;
+  }
   let r = ripple(p, t);
   let n = normalize(vec3f(-dx - r.x, 1.0, -dz - r.y));
 
-  let toEye = frame.camPos.xyz - in.world;
-  let dist = length(toEye);
   let v = toEye / dist;
   let fresnel = 0.04 + 0.96 * pow(1.0 - max(dot(n, v), 0.0), 5.0);
   let refl = reflect(-v, n);
@@ -170,7 +178,7 @@ fn surface(p: vec2f, t: f32) -> f32 {
   var c = mix(frame.water.rgb, sky, clamp(fresnel * 1.15, 0.0, 1.0));
   // Sun glitter: a tight highlight that the ripples break up into sparkles.
   c += vec3f(1.0, 0.9, 0.7) * pow(max(dot(refl, frame.sunDir.xyz), 0.0), 1200.0) * 2.0;
-  let foam = clamp(wake(p).y, 0.0, 1.0) * (0.6 + 0.4 * sin(dot(p, vec2f(13.0, 9.0)) + t * 6.0));
+  let foam = clamp(w.y, 0.0, 1.0) * (0.6 + 0.4 * sin(dot(p, vec2f(13.0, 9.0)) + t * 6.0));
   c = mix(c, vec3f(0.85, 0.9, 0.9), foam * 0.45);
   return vec4f(fog(c, dist), 1.0);
 }
