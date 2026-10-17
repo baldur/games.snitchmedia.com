@@ -13,7 +13,7 @@
     ul { list-style: none; padding: 0; margin: 0; }
     .games li { border-top: 1px solid var(--line); }
     .games a { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; padding: 1rem 0; text-decoration: none; }
-    .games strong { font-size: 1.5rem; }
+    .games strong { font-size: 1.5rem; white-space: nowrap; }
     .games span { color: var(--dim); font-size: 0.9rem; text-align: right; }
     .games a:hover strong { color: var(--accent); }
     footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--dim); }
@@ -28,6 +28,7 @@
       <li><a href="pong/"><strong>Pong</strong><span>Canvas, Gamepad API, Web Audio, touch</span></a></li>
       <li><a href="snake/"><strong>Snake</strong><span>Web Worker AI demo, tilt steering, Wake Lock, swipe, gamepad</span></a></li>
       <li><a href="bricks/"><strong>Bricks</strong><span>WebGPU compute particles, Canvas, Gamepad API, Web Audio, touch</span></a></li>
+      <li><a href="connect-four/"><strong>Connect Four</strong><span>DOM board, Web Animations, AI in a Worker, Gamepad API</span></a></li>
     </ul>
 
     <footer>
